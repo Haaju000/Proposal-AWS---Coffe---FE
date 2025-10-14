@@ -1,7 +1,8 @@
 .hero {
   position: relative;
-  height: 100vh;
-  min-height: 600px;
+  height: 60vh; /* Giảm từ 100vh xuống 60vh */
+  min-height: 400px; /* Giảm từ 600px xuống 400px */
+  max-height: 500px; /* Thêm max-height để giới hạn chiều cao */
   display: flex;
   align-items: center;
   overflow: hidden;
@@ -13,15 +14,11 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(135deg, 
-    #8B4513 0%, 
-    #A0522D 25%, 
-    #CD853F 50%, 
-    #D2691E 75%, 
-    #8B4513 100%
-  );
-  background-size: 400% 400%;
-  animation: gradientShift 8s ease infinite;
+  background-image: 
+    url("https://static.vecteezy.com/system/resources/previews/011/332/525/large_2x/hand-drawn-coffee-concept-background-free-vector.jpg");
+  background-size: cover;
+  background-position: bottom;
+  background-repeat: no-repeat;
 }
 
 .hero-background::before {
@@ -31,11 +28,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-image: 
-    radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.1) 0%, transparent 25%),
-    radial-gradient(circle at 75% 75%, rgba(255, 255, 255, 0.05) 0%, transparent 25%),
-    linear-gradient(45deg, rgba(139, 69, 19, 0.8) 0%, rgba(160, 82, 45, 0.6) 100%);
-  background-size: 200px 200px, 150px 150px, 100% 100%;
+  background: rgba(0, 0, 0, 0.5);
 }
 
 .hero-overlay {
@@ -44,9 +37,9 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.3);
-  background-image: 
-    url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  background: rgba(0, 0, 0, 0.2);
+  
+
 }
 
 @keyframes gradientShift {
@@ -73,19 +66,19 @@
 }
 
 .hero-title {
-  font-size: 4rem;
+  font-size: 3rem; /* Giảm từ 4rem xuống 3rem */
   font-weight: 700;
   line-height: 1.1;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem; /* Giảm từ 1.5rem xuống 1rem */
   font-family: 'Georgia', serif;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
   animation: fadeInUp 1s ease-out;
 }
 
 .hero-description {
-  font-size: 1.25rem;
+  font-size: 1.1rem; /* Giảm từ 1.25rem xuống 1.1rem */
   line-height: 1.6;
-  margin-bottom: 2.5rem;
+  margin-bottom: 2rem; /* Giảm từ 2.5rem xuống 2rem */
   opacity: 0.95;
   font-weight: 300;
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
@@ -138,8 +131,9 @@
 
 @media (max-width: 768px) {
   .hero {
-    height: 80vh;
-    min-height: 500px;
+    height: 50vh; /* Giảm từ 80vh xuống 50vh */
+    min-height: 350px; /* Giảm từ 500px xuống 350px */
+    max-height: 400px;
   }
   
   .hero-container {
@@ -147,11 +141,11 @@
   }
   
   .hero-title {
-    font-size: 2.5rem;
+    font-size: 2rem; /* Giảm từ 2.5rem xuống 2rem */
   }
   
   .hero-description {
-    font-size: 1.1rem;
+    font-size: 1rem; /* Giảm từ 1.1rem xuống 1rem */
     br {
       display: none;
     }
@@ -164,11 +158,17 @@
 }
 
 @media (max-width: 480px) {
+  .hero {
+    height: 45vh;
+    min-height: 300px;
+    max-height: 350px;
+  }
+  
   .hero-title {
-    font-size: 2rem;
+    font-size: 1.75rem; /* Giảm từ 2rem xuống 1.75rem */
   }
   
   .hero-description {
-    font-size: 1rem;
+    font-size: 0.95rem; /* Giảm từ 1rem xuống 0.95rem */
   }
 }
