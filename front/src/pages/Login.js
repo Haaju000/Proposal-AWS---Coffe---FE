@@ -1,16 +1,22 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import Header from '../components/Header';
 import '../css/Auth.css';
 
 const Login = () => {
+  const navigate = useNavigate();
+  const { login } = useAuth();
+  
   const [formData, setFormData] = useState({
-    email: '',
+    username: '',
     password: '',
     rememberMe: false
   });
 
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -18,13 +24,32 @@ const Login = () => {
       ...formData,
       [name]: type === 'checkbox' ? checked : value
     });
+    // Clear error when user starts typing
+    if (error) setError('');
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Handle login here
-    console.log('Login attempt:', formData);
-    alert('Login functionality would be implemented here!');
+    setIsLoading(true);
+    setError('');
+
+    try {
+      console.log('Login attempt:', formData);
+      const userData = await login(formData.username, formData.password);
+      console.log('Login successful, redirecting...');
+      
+      // Check if user is admin and redirect accordingly
+      if (userData && userData.username === 'admin') {
+        navigate('/admin'); // Redirect admin to dashboard
+      } else {
+        navigate('/'); // Redirect regular users to home page
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      setError(error.message || 'Login failed. Please check your credentials and try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -68,15 +93,15 @@ const Login = () => {
                 
                 <form onSubmit={handleSubmit} className="auth-form">
                   <div className="form-group">
-                    <label htmlFor="email">Email Address</label>
+                    <label htmlFor="username">Username</label>
                     <input
-                      type="email"
-                      id="email"
-                      name="email"
-                      value={formData.email}
+                      type="text"
+                      id="username"
+                      name="username"
+                      value={formData.username}
                       onChange={handleChange}
                       required
-                      placeholder="your.email@example.com"
+                      placeholder="Enter your username"
                     />
                   </div>
 
@@ -116,8 +141,14 @@ const Login = () => {
                     <a href="#forgot" className="forgot-link">Forgot password?</a>
                   </div>
 
-                  <button type="submit" className="auth-submit-btn">
-                    Sign In
+                  {error && (
+                    <div className="error-message">
+                      {error}
+                    </div>
+                  )}
+
+                  <button type="submit" className="auth-submit-btn" disabled={isLoading}>
+                    {isLoading ? 'Signing In...' : 'Sign In'}
                   </button>
                 </form>
 
