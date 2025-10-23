@@ -22,7 +22,7 @@ const Contact = () => {
     e.preventDefault();
     // Handle form submission here
     console.log('Form submitted:', formData);
-    alert('Thank you for your message! We\'ll get back to you soon.');
+    alert('Cảm ơn bạn đã gửi tin nhắn! Chúng tôi sẽ phản hồi sớm.');
     setFormData({
       name: '',
       email: '',
@@ -40,9 +40,9 @@ const Contact = () => {
         {/* Hero Section */}
         <section className="contact-hero">
           <div className="contact-hero-container">
-            <h1 className="contact-hero-title">Get In Touch</h1>
+            <h1 className="contact-hero-title">Liên hệ</h1>
             <p className="contact-hero-subtitle">
-              We'd love to hear from you. Send us a message and we'll respond as soon as possible.
+              Chúng tôi rất mong nhận được phản hồi từ bạn. Gửi tin nhắn và chúng tôi sẽ phản hồi trong thời gian sớm nhất.
             </p>
           </div>
         </section>
@@ -53,11 +53,11 @@ const Contact = () => {
             <div className="contact-grid">
               {/* Contact Form */}
               <div className="contact-form-section">
-                <h2>Send us a Message</h2>
+                <h2>Gửi tin nhắn</h2>
                 <form onSubmit={handleSubmit} className="contact-form">
                   <div className="form-row">
                     <div className="form-group">
-                      <label htmlFor="name">Full Name *</label>
+                      <label htmlFor="name">Họ và tên *</label>
                       <input
                         type="text"
                         id="name"
@@ -65,11 +65,11 @@ const Contact = () => {
                         value={formData.name}
                         onChange={handleChange}
                         required
-                        placeholder="Your full name"
+                        placeholder="Họ và tên của bạn"
                       />
                     </div>
                     <div className="form-group">
-                      <label htmlFor="email">Email Address *</label>
+                      <label htmlFor="email">Email *</label>
                       <input
                         type="email"
                         id="email"
@@ -77,25 +77,25 @@ const Contact = () => {
                         value={formData.email}
                         onChange={handleChange}
                         required
-                        placeholder="your.email@example.com"
+                        placeholder="email.cuaban@vd.com"
                       />
                     </div>
                   </div>
                   
                   <div className="form-row">
                     <div className="form-group">
-                      <label htmlFor="phone">Phone Number</label>
+                      <label htmlFor="phone">Số điện thoại</label>
                       <input
                         type="tel"
                         id="phone"
                         name="phone"
                         value={formData.phone}
                         onChange={handleChange}
-                        placeholder="(555) 123-4567"
+                        placeholder="0123 456 789"
                       />
                     </div>
                     <div className="form-group">
-                      <label htmlFor="subject">Subject *</label>
+                      <label htmlFor="subject">Chủ đề *</label>
                       <select
                         id="subject"
                         name="subject"
@@ -103,18 +103,18 @@ const Contact = () => {
                         onChange={handleChange}
                         required
                       >
-                        <option value="">Select a subject</option>
-                        <option value="general">General Inquiry</option>
-                        <option value="catering">Catering Services</option>
-                        <option value="feedback">Feedback</option>
-                        <option value="partnership">Partnership</option>
-                        <option value="complaint">Complaint</option>
+                        <option value="">Chọn chủ đề</option>
+                        <option value="general">Yêu cầu chung</option>
+                        <option value="catering">Dịch vụ tiệc</option>
+                        <option value="feedback">Phản hồi</option>
+                        <option value="partnership">Hợp tác</option>
+                        <option value="complaint">Khiếu nại</option>
                       </select>
                     </div>
                   </div>
                   
                   <div className="form-group">
-                    <label htmlFor="message">Message *</label>
+                    <label htmlFor="message">Tin nhắn *</label>
                     <textarea
                       id="message"
                       name="message"
@@ -122,32 +122,32 @@ const Contact = () => {
                       onChange={handleChange}
                       required
                       rows="6"
-                      placeholder="Tell us how we can help you..."
+                      placeholder="Mô tả yêu cầu hoặc vấn đề của bạn..."
                     />
                   </div>
                   
                   <button type="submit" className="submit-btn">
-                    Send Message
+                    Gửi
                   </button>
                 </form>
               </div>
 
               {/* Contact Info */}
               <div className="contact-info-section">
-                <h2>Visit Our Café</h2>
+                <h2>Đến quán của chúng tôi</h2>
                 
                 <div className="info-card">
                   <div className="info-icon">📍</div>
                   <div className="info-content">
-                    <h3>Address</h3>
-                    <p>123 Coffee Street<br />Downtown District<br />City, State 12345</p>
+                    <h3>Địa chỉ</h3>
+                    <p>123 Coffee Street<br />Quận Trung tâm<br />Thành phố, Tỉnh 12345</p>
                   </div>
                 </div>
 
                 <div className="info-card">
                   <div className="info-icon">📞</div>
                   <div className="info-content">
-                    <h3>Phone</h3>
+                    <h3>Điện thoại</h3>
                     <p>(555) 123-4567</p>
                   </div>
                 </div>
@@ -163,19 +163,19 @@ const Contact = () => {
                 <div className="info-card">
                   <div className="info-icon">🕐</div>
                   <div className="info-content">
-                    <h3>Opening Hours</h3>
+                    <h3>Giờ mở cửa</h3>
                     <div className="hours-list">
                       <div className="hours-item">
-                        <span>Monday - Friday</span>
-                        <span>7:00 AM - 8:00 PM</span>
+                        <span>Thứ Hai - Thứ Sáu</span>
+                        <span>7:00 - 20:00</span>
                       </div>
                       <div className="hours-item">
-                        <span>Saturday</span>
-                        <span>8:00 AM - 9:00 PM</span>
+                        <span>Thứ Bảy</span>
+                        <span>8:00 - 21:00</span>
                       </div>
                       <div className="hours-item">
-                        <span>Sunday</span>
-                        <span>8:00 AM - 7:00 PM</span>
+                        <span>Chủ Nhật</span>
+                        <span>8:00 - 19:00</span>
                       </div>
                     </div>
                   </div>
@@ -183,12 +183,12 @@ const Contact = () => {
 
                 {/* Map placeholder */}
                 <div className="map-section">
-                  <h3>Find Us</h3>
+                  <h3>Tìm đường đến quán</h3>
                   <div className="map-placeholder">
                     <div className="map-content">
                       <span className="map-icon">🗺️</span>
-                      <p>Interactive Map</p>
-                      <p className="map-note">Click to view in Google Maps</p>
+                      <p>Bản đồ tương tác</p>
+                      <p className="map-note">Nhấp để xem trên Google Maps</p>
                     </div>
                   </div>
                 </div>
@@ -200,23 +200,23 @@ const Contact = () => {
         {/* FAQ Section */}
         <section className="faq-section">
           <div className="faq-container">
-            <h2>Frequently Asked Questions</h2>
+            <h2>Câu hỏi thường gặp</h2>
             <div className="faq-grid">
               <div className="faq-item">
-                <h3>Do you offer catering services?</h3>
-                <p>Yes! We provide catering for corporate events, meetings, and special occasions. Contact us for custom packages.</p>
+                <h3>Bạn có cung cấp dịch vụ tiệc không?</h3>
+                <p>Có! Chúng tôi nhận phục vụ tiệc cho sự kiện doanh nghiệp, họp mặt và dịp đặc biệt. Liên hệ để biết gói dịch vụ tùy chỉnh.</p>
               </div>
               <div className="faq-item">
-                <h3>Can I host private events at your café?</h3>
-                <p>Absolutely! We have space available for private events. Please contact us to discuss your requirements and availability.</p>
+                <h3>Tôi có thể tổ chức sự kiện riêng tại quán không?</h3>
+                <p>Có, chúng tôi có không gian cho sự kiện riêng. Vui lòng liên hệ để thảo luận yêu cầu và lịch trống.</p>
               </div>
               <div className="faq-item">
-                <h3>Do you have WiFi and workspace areas?</h3>
-                <p>Yes, we offer free WiFi and have comfortable seating areas perfect for remote work or studying.</p>
+                <h3>Quán có WiFi và khu vực làm việc không?</h3>
+                <p>Có, chúng tôi cung cấp WiFi miễn phí và khu vực ngồi thoải mái phù hợp cho làm việc từ xa hoặc học tập.</p>
               </div>
               <div className="faq-item">
-                <h3>Are you hiring?</h3>
-                <p>We're always looking for passionate team members! Check our careers page or stop by to inquire about current openings.</p>
+                <h3>Quán đang tuyển dụng không?</h3>
+                <p>Chúng tôi luôn tìm kiếm những thành viên đam mê! Kiểm tra trang tuyển dụng hoặc ghé quán để hỏi về các vị trí hiện có.</p>
               </div>
             </div>
           </div>

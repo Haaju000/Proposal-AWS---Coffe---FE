@@ -5,19 +5,19 @@ const Testimonials = () => {
   const testimonials = [
     {
       id: 1,
-      text: "The best coffee in town! The atmosphere is so cozy and welcoming.",
+      text: "Cà phê tuyệt nhất trong thành phố! Không gian ấm cúng và thân thiện.",
       author: "Sarah Johnson",
       rating: 5
     },
     {
       id: 2,
-      text: "Amazing quality and service. My daily coffee ritual starts here.",
+      text: "Chất lượng và dịch vụ tuyệt vời. Thói quen cà phê hàng ngày của tôi bắt đầu ở đây.",
       author: "Mike Chen",
       rating: 5
     },
     {
       id: 3,
-      text: "Love the fresh pastries and the friendly staff. Highly recommended!",
+      text: "Yêu các món bánh tươi và nhân viên thân thiện. Rất đáng để thử!",
       author: "Emma Davis",
       rating: 5
     }
@@ -37,8 +37,8 @@ const Testimonials = () => {
     <section className="testimonials">
       <div className="testimonials-container">
         <div className="testimonials-header">
-          <h2 className="testimonials-title">What Our Customers Say</h2>
-          <p className="testimonials-subtitle">Join thousands of happy coffee lovers</p>
+          <h2 className="testimonials-title">Khách hàng nói gì về chúng tôi</h2>
+          <p className="testimonials-subtitle">Tham gia cùng hàng nghìn người yêu cà phê</p>
         </div>
         
         <div className="testimonial-card">
@@ -61,14 +61,14 @@ const Testimonials = () => {
           <button 
             className="nav-button prev-button" 
             onClick={prevTestimonial}
-            aria-label="Previous testimonial"
+            aria-label="Bài đánh giá trước"
           >
             ‹
           </button>
           <button 
             className="nav-button next-button" 
             onClick={nextTestimonial}
-            aria-label="Next testimonial"
+            aria-label="Bài đánh giá tiếp theo"
           >
             ›
           </button>
@@ -80,7 +80,7 @@ const Testimonials = () => {
               key={index}
               className={`dot ${index === currentTestimonial ? 'active' : ''}`}
               onClick={() => setCurrentTestimonial(index)}
-              aria-label={`Go to testimonial ${index + 1}`}
+              aria-label={`Chuyển đến đánh giá ${index + 1}`}
             />
           ))}
         </div>

@@ -46,7 +46,7 @@ const Login = () => {
       }
     } catch (error) {
       console.error('Login error:', error);
-      setError(error.message || 'Login failed. Please check your credentials and try again.');
+      setError(error.message || 'Đăng nhập thất bại. Vui lòng kiểm tra thông tin và thử lại.');
     } finally {
       setIsLoading(false);
     }
@@ -66,20 +66,20 @@ const Login = () => {
                   <span className="logo-icon">☕</span>
                   <span className="logo-text">Cozy Brew</span>
                 </div>
-                <h1>Welcome Back!</h1>
-                <p>Sign in to your account to access exclusive features, track your orders, and enjoy personalized recommendations.</p>
+                <h1>Chào mừng trở lại!</h1>
+                <p>Đăng nhập vào tài khoản để truy cập tính năng độc quyền, theo dõi đơn hàng và nhận gợi ý cá nhân hóa.</p>
                 <div className="brand-features">
                   <div className="feature-item">
                     <span className="feature-icon">🎯</span>
-                    <span>Personalized recommendations</span>
+                    <span>Gợi ý cá nhân</span>
                   </div>
                   <div className="feature-item">
                     <span className="feature-icon">📦</span>
-                    <span>Order tracking</span>
+                    <span>Theo dõi đơn hàng</span>
                   </div>
                   <div className="feature-item">
                     <span className="feature-icon">⭐</span>
-                    <span>Loyalty rewards</span>
+                    <span>Ưu đãi tích điểm</span>
                   </div>
                 </div>
               </div>
@@ -88,12 +88,12 @@ const Login = () => {
             {/* Right side - Login form */}
             <div className="auth-form-section">
               <div className="auth-form-container">
-                <h2>Sign In</h2>
-                <p className="auth-subtitle">Enter your credentials to access your account</p>
+                <h2>Đăng nhập</h2>
+                <p className="auth-subtitle">Nhập thông tin để truy cập tài khoản</p>
                 
                 <form onSubmit={handleSubmit} className="auth-form">
                   <div className="form-group">
-                    <label htmlFor="username">Username</label>
+                    <label htmlFor="username">Tên đăng nhập</label>
                     <input
                       type="text"
                       id="username"
@@ -101,12 +101,12 @@ const Login = () => {
                       value={formData.username}
                       onChange={handleChange}
                       required
-                      placeholder="Enter your username"
+                      placeholder="Nhập tên đăng nhập"
                     />
                   </div>
 
                   <div className="form-group">
-                    <label htmlFor="password">Password</label>
+                    <label htmlFor="password">Mật khẩu</label>
                     <div className="password-input-wrapper">
                       <input
                         type={showPassword ? 'text' : 'password'}
@@ -115,7 +115,7 @@ const Login = () => {
                         value={formData.password}
                         onChange={handleChange}
                         required
-                        placeholder="Enter your password"
+                        placeholder="Nhập mật khẩu"
                       />
                       <button
                         type="button"
@@ -136,9 +136,9 @@ const Login = () => {
                         onChange={handleChange}
                       />
                       <span className="checkmark"></span>
-                      Remember me
+                      Ghi nhớ đăng nhập
                     </label>
-                    <a href="#forgot" className="forgot-link">Forgot password?</a>
+                    <a href="#forgot" className="forgot-link">Quên mật khẩu?</a>
                   </div>
 
                   {error && (
@@ -148,32 +148,32 @@ const Login = () => {
                   )}
 
                   <button type="submit" className="auth-submit-btn" disabled={isLoading}>
-                    {isLoading ? 'Signing In...' : 'Sign In'}
+                    {isLoading ? 'Đang đăng nhập...' : 'Đăng nhập'}
                   </button>
                 </form>
 
                 <div className="auth-divider">
-                  <span>or</span>
+                  <span>hoặc</span>
                 </div>
 
                 <div className="social-login">
                   <button className="social-btn google-btn">
                     <span className="social-icon">G</span>
-                    Continue with Google
+                    Tiếp tục với Google
                   </button>
                   <button className="social-btn facebook-btn">
                     <span className="social-icon">f</span>
-                    Continue with Facebook
+                    Tiếp tục với Facebook
                   </button>
                 </div>
 
                 <p className="auth-switch">
-                  Don't have an account? 
+                  Chưa có tài khoản? 
                   <Link 
                     to="/register"
                     className="switch-link"
                   >
-                    Sign up here
+                    Đăng ký tại đây
                   </Link>
                 </p>
               </div>

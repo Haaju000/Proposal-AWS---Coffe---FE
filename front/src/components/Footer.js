@@ -7,7 +7,7 @@ const Footer = () => {
   const handleSubscribe = (e) => {
     e.preventDefault();
     if (email) {
-      alert('Thank you for subscribing!');
+      alert('Cảm ơn bạn đã đăng ký nhận tin!');
       setEmail('');
     }
   };
@@ -22,51 +22,51 @@ const Footer = () => {
               <span className="logo-text">Cozy Brew</span>
             </div>
             <p className="footer-description">
-              Crafting moments of warmth, one cup at a time.
+              Tạo nên những khoảnh khắc ấm áp, từng tách cà phê.
             </p>
           </div>
           
           <div className="footer-section">
-            <h3 className="footer-title">Quick Links</h3>
+            <h3 className="footer-title">Liên kết nhanh</h3>
             <ul className="footer-links">
-              <li><a href="#menu">Menu</a></li>
-              <li><a href="#about">About Us</a></li>
-              <li><a href="#contact">Contact</a></li>
-              <li><a href="#careers">Careers</a></li>
+              <li><a href="#menu">Thực đơn</a></li>
+              <li><a href="#about">Giới thiệu</a></li>
+              <li><a href="#contact">Liên hệ</a></li>
+              <li><a href="#careers">Tuyển dụng</a></li>
             </ul>
           </div>
           
           <div className="footer-section">
-            <h3 className="footer-title">Opening Hours</h3>
+            <h3 className="footer-title">Giờ mở cửa</h3>
             <div className="opening-hours">
               <div className="hours-item">
-                <span className="day">Monday - Friday:</span>
-                <span className="time">7am - 8pm</span>
+                <span className="day">Thứ Hai - Thứ Sáu:</span>
+                <span className="time">7:00 - 20:00</span>
               </div>
               <div className="hours-item">
-                <span className="day">Saturday:</span>
-                <span className="time">8am - 9pm</span>
+                <span className="day">Thứ Bảy:</span>
+                <span className="time">8:00 - 21:00</span>
               </div>
               <div className="hours-item">
-                <span className="day">Sunday:</span>
-                <span className="time">8am - 7pm</span>
+                <span className="day">Chủ Nhật:</span>
+                <span className="time">8:00 - 19:00</span>
               </div>
             </div>
           </div>
           
           <div className="footer-section">
-            <h3 className="footer-title">Stay Connected</h3>
+            <h3 className="footer-title">Kết nối với chúng tôi</h3>
             <form className="newsletter-form" onSubmit={handleSubscribe}>
               <input
                 type="email"
-                placeholder="Your email"
+                placeholder="Email của bạn"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="newsletter-input"
                 required
               />
               <button type="submit" className="newsletter-button">
-                Subscribe
+                Đăng ký
               </button>
             </form>
             
@@ -99,7 +99,7 @@ const Footer = () => {
         
         <div className="footer-bottom">
           <p className="copyright">
-            © 2024 Cozy Brew. All rights reserved. Made with ❤️ and ☕
+            © 2024 Cozy Brew. Bảo lưu mọi quyền. Được tạo bằng ❤️ và ☕
           </p>
         </div>
       </div>

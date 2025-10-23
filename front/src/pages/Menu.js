@@ -77,7 +77,7 @@ const Menu = () => {
       {
         id: 1,
         name: 'Espresso',
-        description: 'Rich, bold, and perfectly extracted shot of pure coffee',
+        description: 'Cà phê đậm đặc, nguyên chất với hương vị đậm nét',
         price: '$3.50',
         category: 'Espresso',
         image: '☕'
@@ -85,7 +85,7 @@ const Menu = () => {
       {
         id: 2,
         name: 'Double Espresso',
-        description: 'Double the intensity, double the satisfaction',
+        description: 'Gấp đôi cường độ, gấp đôi sự hài lòng',
         price: '$4.50',
         category: 'Espresso',
         image: '☕'
@@ -93,7 +93,7 @@ const Menu = () => {
       {
         id: 3,
         name: 'Americano',
-        description: 'Smooth espresso with hot water for a lighter taste',
+        description: 'Espresso hòa với nước nóng, vị nhẹ và mượt',
         price: '$3.75',
         category: 'Espresso',
         image: '☕'
@@ -101,7 +101,7 @@ const Menu = () => {
       {
         id: 4,
         name: 'Latte',
-        description: 'Creamy steamed milk with espresso and beautiful latte art',
+        description: 'Espresso hòa kem sữa hấp, mịn và ngậy',
         price: '$4.50',
         category: 'Latte',
         image: '🥛'
@@ -109,7 +109,7 @@ const Menu = () => {
       {
         id: 5,
         name: 'Caramel Latte',
-        description: 'Sweet caramel flavor combined with rich espresso and steamed milk',
+        description: 'Vị caramel ngọt dịu kết hợp cùng espresso và sữa',
         price: '$5.00',
         category: 'Latte',
         image: '🥛'
@@ -117,7 +117,7 @@ const Menu = () => {
       {
         id: 6,
         name: 'Vanilla Latte',
-        description: 'Smooth vanilla flavor with perfectly steamed milk',
+        description: 'Hương vanilla dịu nhẹ cùng sữa tươi đánh bọt',
         price: '$5.00',
         category: 'Latte',
         image: '🥛'
@@ -125,7 +125,7 @@ const Menu = () => {
       {
         id: 7,
         name: 'Cappuccino',
-        description: 'Traditional Italian favorite with thick foam',
+        description: 'Klassic Ý với lớp bọt sữa dày và vị cân bằng',
         price: '$4.25',
         category: 'Cappuccino',
         image: '☕'
@@ -133,7 +133,7 @@ const Menu = () => {
       {
         id: 8,
         name: 'Mocha Cappuccino',
-        description: 'Cappuccino with rich chocolate and thick foam',
+        description: 'Cappuccino pha cùng socola, vị ngọt dịu và đậm đà',
         price: '$4.75',
         category: 'Cappuccino',
         image: '☕'
@@ -142,24 +142,24 @@ const Menu = () => {
     pastries: [
       {
         id: 9,
-        name: 'Croissant',
-        description: 'Buttery, flaky French pastry baked fresh daily',
+        name: 'Bánh sừng bò (Croissant)',
+        description: 'Bánh bơ giòn, xốp, nướng hàng ngày',
         price: '$2.99',
         category: 'Pastries',
         image: '🥐'
       },
       {
         id: 10,
-        name: 'Chocolate Muffin',
-        description: 'Rich chocolate muffin with chocolate chips',
+        name: 'Bánh muffin socola',
+        description: 'Muffin socola đậm với vụn socola bên trong',
         price: '$3.50',
         category: 'Pastries',
         image: '🧁'
       },
       {
         id: 11,
-        name: 'Almond Danish',
-        description: 'Sweet pastry with almond cream filling',
+        name: 'Bánh Danish hạnh nhân',
+        description: 'Bánh ngọt với nhân kem hạnh nhân thơm ngon',
         price: '$3.75',
         category: 'Pastries',
         image: '🥐'
@@ -169,14 +169,39 @@ const Menu = () => {
 
   const allItems = [...menuData.coffee, ...menuData.pastries];
   
-  const filterItems = (category) => {
-    if (category === 'All') return allItems;
-    return allItems.filter(item => item.category === category);
+  const filterItems = (categoryKey) => {
+    if (categoryKey === 'All') return allItems;
+    return allItems.filter(item => item.category === categoryKey);
   };
 
   const filteredItems = filterItems(activeFilter);
 
-  const categories = ['All', 'Espresso', 'Latte', 'Cappuccino', 'Pastries'];
+  const categories = [
+    { key: 'All', label: 'Tất cả' },
+    { key: 'Espresso', label: 'Espresso' },
+    { key: 'Latte', label: 'Latte' },
+    { key: 'Cappuccino', label: 'Cappuccino' },
+    { key: 'Pastries', label: 'Bánh ngọt' }
+  ];
+
+  const activeLabel = categories.find(c => c.key === activeFilter)?.label || activeFilter;
+
+  const categorySubtitle = (key) => {
+    switch (key) {
+      case 'All':
+        return 'Khám phá toàn bộ thực đơn của chúng tôi';
+      case 'Espresso':
+        return 'Các đồ uống espresso đậm đà và mạnh mẽ';
+      case 'Latte':
+        return 'Đồ uống sữa với espresso, mềm mại và thơm';
+      case 'Cappuccino':
+        return 'Các món cổ điển kiểu Ý với lớp bọt sữa dày';
+      case 'Pastries':
+        return 'Bánh nướng tươi ngon, phù hợp dùng kèm cà phê';
+      default:
+        return '';
+    }
+  };
 
   return (
     <div className="menu-page">
@@ -187,25 +212,25 @@ const Menu = () => {
           {/* Sidebar */}
           <aside className="menu-sidebar">
             <div className="sidebar-header">
-              <h2 className="sidebar-title">Our Menu</h2>
+              <h2 className="sidebar-title">Thực đơn</h2>
             </div>
             
             {/* Category Navigation */}
             <nav className="menu-categories">
               {categories.map((category) => (
                 <button
-                  key={category}
-                  className={`category-btn ${activeFilter === category ? 'active' : ''}`}
-                  onClick={() => setActiveFilter(category)}
+                  key={category.key}
+                  className={`category-btn ${activeFilter === category.key ? 'active' : ''}`}
+                  onClick={() => setActiveFilter(category.key)}
                 >
                   <span className="category-icon">
-                    {category === 'All' && '🍽️'}
-                    {category === 'Espresso' && '☕'}
-                    {category === 'Latte' && '🥛'}
-                    {category === 'Cappuccino' && '☕'}
-                    {category === 'Pastries' && '🥐'}
+                    {category.key === 'All' && '🍽️'}
+                    {category.key === 'Espresso' && '☕'}
+                    {category.key === 'Latte' && '🥛'}
+                    {category.key === 'Cappuccino' && '☕'}
+                    {category.key === 'Pastries' && '🥐'}
                   </span>
-                  {category}
+                  {category.label}
                 </button>
               ))}
             </nav>
@@ -214,11 +239,11 @@ const Menu = () => {
             <div className="sidebar-actions">
               <button className="action-btn primary">
                 <span className="btn-icon">🛒</span>
-                Order Online
+                Đặt hàng trực tuyến
               </button>
               <button className="action-btn secondary">
                 <span className="btn-icon">📋</span>
-                Make a Reservation
+                Đặt chỗ
               </button>
             </div>
 
@@ -228,7 +253,7 @@ const Menu = () => {
                 <div className="cart-header">
                   <h3 className="cart-title">
                     <span className="cart-icon">🛒</span>
-                    Your Order ({cartItemCount} {cartItemCount === 1 ? 'item' : 'items'})
+                    Đơn hàng của bạn ({cartItemCount} món)
                   </h3>
                 </div>
                 
@@ -269,14 +294,14 @@ const Menu = () => {
                 
                 <div className="cart-total">
                   <div className="total-line">
-                    <span className="total-label">Total:</span>
+                    <span className="total-label">Tổng:</span>
                     <span className="total-amount">${cartTotal.toFixed(2)}</span>
                   </div>
                 </div>
                 
                 <button className="checkout-btn">
                   <span className="btn-icon">💳</span>
-                  Proceed to Checkout
+                  Thanh toán
                 </button>
               </div>
             )}
@@ -287,13 +312,9 @@ const Menu = () => {
           <div className="menu-content">
             {/* Category Header */}
             <div className="category-header">
-              <h1 className="category-title">{activeFilter}</h1>
+              <h1 className="category-title">{activeLabel}</h1>
               <p className="category-subtitle">
-                {activeFilter === 'All' ? 'Explore our complete menu selection' : 
-                 activeFilter === 'Espresso' ? 'Bold and rich espresso-based drinks' :
-                 activeFilter === 'Latte' ? 'Creamy milk-based coffee beverages' :
-                 activeFilter === 'Cappuccino' ? 'Traditional Italian coffee classics' :
-                 'Fresh baked pastries and treats'}
+                {categorySubtitle(activeFilter)}
               </p>
             </div>
 
@@ -330,7 +351,7 @@ const Menu = () => {
                           className="add-to-cart"
                           onClick={() => addToCart(item)}
                         >
-                          Add to Cart
+                          Thêm vào giỏ
                         </button>
                       </div>
                     </div>

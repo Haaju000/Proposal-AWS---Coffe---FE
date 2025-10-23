@@ -17,13 +17,13 @@ const Hero = () => {
               Tells a Story
             </h1>
             <p className="hero-description">
-              Experience the finest artisan coffee in a warm, welcoming
+              Thưởng thức hương vị cà phê thủ công thượng hạng trong không gian
               <br />
-              atmosphere
+              ấm áp và thân thiện
             </p>
             <button className="hero-button">
               <span className="button-icon">☕</span>
-              Order Now
+              Đặt hàng ngay
             </button>
           </div>
         </div>

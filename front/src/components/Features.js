@@ -5,23 +5,23 @@ const Features = () => {
   const features = [
     {
       icon: '☕',
-      title: 'Premium Beans',
-      description: 'Hand-selected, ethically sourced beans'
+      title: 'Hạt cà phê thượng hạng',
+      description: 'Những hạt cà phê được tuyển chọn thủ công'
     },
     {
       icon: '🏆',
-      title: 'Award Winning',
-      description: 'Recognized for excellence'
+      title: 'Đạt nhiều giải thưởng',
+      description: 'Được ghi nhận vì sự xuất sắc'
     },
     {
       icon: '🕐',
-      title: 'Always Fresh',
-      description: 'Roasted daily, brewed to perfection'
+      title: 'Luôn giữ trọn vị tươi',
+      description: 'Rang hằng ngày, pha chế tỉ mỉ cho hương vị hoàn hảo'
     },
     {
       icon: '❤️',
-      title: 'Made with Love',
-      description: 'Crafted by passionate baristas'
+      title: 'Pha chế bằng cả tình yêu',
+      description: 'Được tạo nên bởi những barista đầy đam mê.'
     }
   ];
 

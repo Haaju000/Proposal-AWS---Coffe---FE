@@ -7,29 +7,29 @@ const CustomerFavorites = () => {
       id: 1,
       name: 'Espresso',
       price: '$3.50',
-      image: '☕', // Placeholder - in real app would be image URL
-      description: 'Rich and bold coffee shot'
+      image: '☕',
+      description: 'Cà phê đậm đà'
     },
     {
       id: 2,
       name: 'Latte',
       price: '$4.50',
-      image: '🥛', // Placeholder - in real app would be image URL
-      description: 'Creamy steamed milk with espresso'
+      image: '🥛',
+      description: 'Sữa hấp kem mịn kết hợp espresso'
     },
     {
       id: 3,
       name: 'Cappuccino',
       price: '$4.25',
-      image: '☕', // Placeholder - in real app would be image URL
-      description: 'Perfect balance of coffee and foam'
+      image: '☕',
+      description: 'Cân bằng hoàn hảo giữa cà phê và bọt sữa'
     },
     {
       id: 4,
-      name: 'Fresh Pastries',
+      name: 'Bánh ngọt tươi',
       price: '$2.99',
-      image: '🥐', // Placeholder - in real app would be image URL
-      description: 'Daily baked croissants and muffins'
+      image: '🥐',
+      description: 'Bánh sừng bò và muffin nướng hàng ngày'
     }
   ];
 
@@ -37,8 +37,8 @@ const CustomerFavorites = () => {
     <section className="customer-favorites">
       <div className="favorites-container">
         <div className="favorites-header">
-          <h2 className="favorites-title">Customer Favorites</h2>
-          <p className="favorites-subtitle">Try our most loved drinks and treats</p>
+          <h2 className="favorites-title">Món được yêu thích nhất</h2>
+          <p className="favorites-subtitle">Thử các đồ uống và món ăn được yêu thích</p>
         </div>
         
         <div className="products-grid">
@@ -47,7 +47,7 @@ const CustomerFavorites = () => {
               <div className="product-image">
                 <span className="product-emoji">{product.image}</span>
                 <div className="product-overlay">
-                  <button className="add-to-cart-btn">Add to Cart</button>
+                  <button className="add-to-cart-btn">Thêm vào giỏ</button>
                 </div>
               </div>
               <div className="product-info">
@@ -60,7 +60,7 @@ const CustomerFavorites = () => {
         </div>
         
         <div className="favorites-footer">
-          <button className="view-menu-btn">View Full Menu</button>
+          <button className="view-menu-btn">Xem toàn bộ thực đơn</button>
         </div>
       </div>
     </section>

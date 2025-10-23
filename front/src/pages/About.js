@@ -8,31 +8,31 @@ const About = () => {
       <Header />
       
       <main className="about-main">
-        {/* Hero Section */}
+        {/* Phần giới thiệu đầu trang */}
         <section className="about-hero">
           <div className="about-hero-container">
-            <h1 className="about-hero-title">Our Story</h1>
+            <h1 className="about-hero-title">Câu chuyện của chúng tôi</h1>
             <p className="about-hero-subtitle">
-              A journey that started with a simple love for great coffee
+              Hành trình bắt đầu từ tình yêu giản dị dành cho hương vị cà phê tuyệt vời
             </p>
           </div>
         </section>
 
-        {/* Story Section */}
+        {/* Phần câu chuyện */}
         <section className="story-section">
           <div className="story-container">
             <div className="story-content">
               <div className="story-text">
-                <h2>Where It All Began</h2>
+                <h2>Nơi tất cả bắt đầu</h2>
                 <p>
-                  Founded in 2018, Cozy Brew started as a small neighborhood coffee shop with 
-                  a big dream: to create a warm, welcoming space where people could enjoy 
-                  exceptional coffee and genuine connections.
+                  Được thành lập vào năm 2018, Cozy Brew khởi đầu là một quán cà phê nhỏ trong khu phố 
+                  với giấc mơ lớn: tạo nên một không gian ấm áp, thân thiện nơi mọi người có thể 
+                  thưởng thức cà phê hảo hạng và gắn kết cùng nhau.
                 </p>
                 <p>
-                  What began as a passion project by coffee enthusiasts has grown into a 
-                  beloved community hub, serving artisan coffee sourced from the finest 
-                  farms around the world.
+                  Bắt đầu từ niềm đam mê của những người yêu cà phê, Cozy Brew đã trở thành 
+                  một điểm đến quen thuộc của cộng đồng, nơi phục vụ những ly cà phê thủ công 
+                  được tuyển chọn từ các nông trại tốt nhất trên thế giới.
                 </p>
               </div>
               <div className="story-image">
@@ -44,89 +44,89 @@ const About = () => {
           </div>
         </section>
 
-        {/* Values Section */}
+        {/* Giá trị cốt lõi */}
         <section className="values-section">
           <div className="values-container">
-            <h2 className="values-title">Our Values</h2>
+            <h2 className="values-title">Giá trị của chúng tôi</h2>
             <div className="values-grid">
               <div className="value-card">
                 <div className="value-icon">🌱</div>
-                <h3>Sustainability</h3>
-                <p>We partner with farms that practice sustainable growing methods and fair trade.</p>
+                <h3>Bền vững</h3>
+                <p>Chúng tôi hợp tác với các nông trại áp dụng phương pháp trồng trọt bền vững và thương mại công bằng.</p>
               </div>
               <div className="value-card">
                 <div className="value-icon">👥</div>
-                <h3>Community</h3>
-                <p>Building connections and creating a space where everyone feels welcome.</p>
+                <h3>Cộng đồng</h3>
+                <p>Xây dựng kết nối và tạo nên không gian nơi mọi người luôn cảm thấy được chào đón.</p>
               </div>
               <div className="value-card">
                 <div className="value-icon">⭐</div>
-                <h3>Quality</h3>
-                <p>Every cup is crafted with precision and care, using only the finest ingredients.</p>
+                <h3>Chất lượng</h3>
+                <p>Mỗi tách cà phê được pha chế cẩn thận với nguyên liệu tốt nhất.</p>
               </div>
               <div className="value-card">
                 <div className="value-icon">❤️</div>
-                <h3>Passion</h3>
-                <p>Our love for coffee drives everything we do, from sourcing to brewing.</p>
+                <h3>Đam mê</h3>
+                <p>Tình yêu dành cho cà phê là động lực trong mọi việc chúng tôi làm — từ chọn hạt đến pha chế.</p>
               </div>
             </div>
           </div>
         </section>
 
-        {/* Team Section */}
+        {/* Đội ngũ */}
         <section className="team-section">
           <div className="team-container">
-            <h2 className="team-title">Meet Our Team</h2>
+            <h2 className="team-title">Gặp gỡ đội ngũ của chúng tôi</h2>
             <div className="team-grid">
               <div className="team-member">
                 <div className="member-image">
                   <span className="member-emoji">👨‍💼</span>
                 </div>
                 <h3>Alex Johnson</h3>
-                <p className="member-role">Founder & Head Roaster</p>
-                <p>Coffee enthusiast with 15 years of experience in specialty coffee.</p>
+                <p className="member-role">Người sáng lập & Trưởng nhóm rang xay</p>
+                <p>Người đam mê cà phê với hơn 15 năm kinh nghiệm trong lĩnh vực cà phê đặc sản.</p>
               </div>
               <div className="team-member">
                 <div className="member-image">
                   <span className="member-emoji">👩‍💼</span>
                 </div>
                 <h3>Maria Santos</h3>
-                <p className="member-role">Head Barista</p>
-                <p>Award-winning barista passionate about latte art and coffee education.</p>
+                <p className="member-role">Trưởng Barista</p>
+                <p>Barista từng đạt giải thưởng, yêu thích nghệ thuật latte và giáo dục cà phê.</p>
               </div>
               <div className="team-member">
                 <div className="member-image">
                   <span className="member-emoji">👨‍🍳</span>
                 </div>
                 <h3>David Chen</h3>
-                <p className="member-role">Pastry Chef</p>
-                <p>Creating fresh, delicious pastries that pair perfectly with our coffee.</p>
+                <p className="member-role">Bếp trưởng bánh ngọt</p>
+                <p>Người sáng tạo ra những món bánh tươi ngon hoàn hảo để thưởng thức cùng cà phê.</p>
               </div>
             </div>
           </div>
         </section>
 
-        {/* Mission Section */}
+        {/* Sứ mệnh */}
         <section className="mission-section">
           <div className="mission-container">
             <div className="mission-content">
-              <h2>Our Mission</h2>
+              <h2>Sứ mệnh của chúng tôi</h2>
               <p>
-                To provide an exceptional coffee experience that brings people together, 
-                supports sustainable practices, and creates lasting memories one cup at a time.
+                Mang đến trải nghiệm cà phê tuyệt vời, gắn kết con người, 
+                ủng hộ các phương pháp bền vững và tạo nên những kỷ niệm đáng nhớ — từng tách cà phê một.
               </p>
               <div className="mission-stats">
                 <div className="stat">
                   <span className="stat-number">10,000+</span>
-                  <span className="stat-label">Happy Customers</span>
+                  <span className="stat-label">Khách hàng hài lòng</span>
                 </div>
                 <div className="stat">
                   <span className="stat-number">50+</span>
-                  <span className="stat-label">Coffee Varieties</span>
+                  <span className="stat-label">Loại cà phê</span>
                 </div>
                 <div className="stat">
                   <span className="stat-number">5</span>
-                  <span className="stat-label">Years of Excellence</span>
+                  <span className="stat-label">Năm hoạt động xuất sắc</span>
                 </div>
               </div>
             </div>

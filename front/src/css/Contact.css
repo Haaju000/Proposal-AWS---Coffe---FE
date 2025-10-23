@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Be+Vietnam+Pro:wght@400;500&display=swap&subset=vietnamese');
+
 .contact-page {
   min-height: 100vh;
   background-color: #F9FAFB;
@@ -42,7 +44,7 @@
   font-size: 3.5rem;
   font-weight: 700;
   margin-bottom: 1rem;
-  font-family: 'Georgia', serif;
+  font-family: 'Playfair Display', serif;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
 }
 
@@ -76,7 +78,7 @@
   font-weight: 700;
   color: #8B4513;
   margin-bottom: 2rem;
-  font-family: 'Georgia', serif;
+  font-family: 'Playfair Display', serif;
 }
 
 .contact-form {
@@ -153,7 +155,7 @@
   font-weight: 700;
   color: #8B4513;
   margin-bottom: 2rem;
-  font-family: 'Georgia', serif;
+  font-family: 'Playfair Display', serif;
 }
 
 .info-card {
@@ -184,7 +186,7 @@
   font-weight: 700;
   color: #1F2937;
   margin-bottom: 0.5rem;
-  font-family: 'Georgia', serif;
+  font-family: 'Playfair Display', serif;
 }
 
 .info-content p {
@@ -225,7 +227,7 @@
   font-weight: 700;
   color: #1F2937;
   margin-bottom: 1rem;
-  font-family: 'Georgia', serif;
+  font-family: 'Playfair Display', serif;
 }
 
 .map-placeholder {
@@ -283,7 +285,7 @@
   color: #8B4513;
   text-align: center;
   margin-bottom: 3rem;
-  font-family: 'Georgia', serif;
+  font-family: 'Playfair Display', serif;
 }
 
 .faq-grid {
@@ -311,7 +313,7 @@
   font-weight: 700;
   color: #1F2937;
   margin-bottom: 1rem;
-  font-family: 'Georgia', serif;
+  font-family: 'Playfair Display', serif;
 }
 
 .faq-item p {

@@ -6,11 +6,11 @@ const LoyaltyProgram = () => {
     <section className="loyalty-program">
       <div className="loyalty-container">
         <div className="loyalty-content">
-          <h2 className="loyalty-title">Join Our Loyalty Program</h2>
+          <h2 className="loyalty-title">Tham gia chương trình khách hàng thân thiết của chúng tôi</h2>
           <p className="loyalty-description">
-            Earn points with every purchase and get exclusive rewards
+            Tích điểm với mỗi lần mua và nhận ngay những phần thưởng độc quyền
           </p>
-          <button className="loyalty-button">Learn More</button>
+          <button className="loyalty-button">Tìm hiểu thêm</button>
         </div>
       </div>
     </section>

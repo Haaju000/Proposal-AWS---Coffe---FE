@@ -38,10 +38,10 @@ const Header = () => {
         </Link>
         
         <nav className="navigation">
-          <Link to="/" className={`nav-link ${isActive('/') ? 'active' : ''}`}>Home</Link>
-          <Link to="/menu" className={`nav-link ${isActive('/menu') ? 'active' : ''}`}>Menu</Link>
-          <Link to="/about" className={`nav-link ${isActive('/about') ? 'active' : ''}`}>About</Link>
-          <Link to="/contact" className={`nav-link ${isActive('/contact') ? 'active' : ''}`}>Contact</Link>
+          <Link to="/" className={`nav-link ${isActive('/') ? 'active' : ''}`}>Trang chủ</Link>
+          <Link to="/menu" className={`nav-link ${isActive('/menu') ? 'active' : ''}`}>Thực đơn</Link>
+          <Link to="/about" className={`nav-link ${isActive('/about') ? 'active' : ''}`}>Giới thiệu</Link>
+          <Link to="/contact" className={`nav-link ${isActive('/contact') ? 'active' : ''}`}>Liên hệ</Link>
         </nav>
         
         <div className="header-actions">

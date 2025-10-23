@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Be+Vietnam+Pro:wght@400;500&display=swap&subset=vietnamese');
+
 .loyalty-program {
   background: linear-gradient(135deg, #059669, #047857);
   padding: 5rem 0;
@@ -35,7 +37,7 @@
   font-size: 2.5rem;
   font-weight: 700;
   margin-bottom: 1rem;
-  font-family: 'Georgia', serif;
+  font-family: 'Playfair Display', serif;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
 }
 
