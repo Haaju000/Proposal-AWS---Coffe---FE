@@ -33,7 +33,7 @@ const Header = () => {
     <header className="header">
       <div className="header-container">
         <Link to="/" className="logo">
-          <span className="logo-icon">☕</span>
+          <img src={require('../assets/images/coffee-cup.png')} alt="Cozy Brew Logo" className="logo-icon" style={{width: '32px', height: '32px', verticalAlign: 'middle'}} />
           <span className="logo-text">Cozy Brew</span>
         </Link>
         

@@ -57,10 +57,6 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #8B4513, #A0522D);
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
   filter: drop-shadow(2px 2px 4px rgba(139, 69, 19, 0.2));
 }
 

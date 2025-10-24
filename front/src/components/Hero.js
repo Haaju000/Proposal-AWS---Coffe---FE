@@ -1,7 +1,20 @@
+
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import '../css/Hero.css';
 
 const Hero = () => {
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+
+  const handleOrderClick = () => {
+    if (!isAuthenticated) {
+      navigate('/login');
+    } else {
+      navigate('/menu');
+    }
+  };
   return (
     <section className="hero">
       <div className="hero-background">
@@ -21,7 +34,7 @@ const Hero = () => {
               <br />
               ấm áp và thân thiện
             </p>
-            <button className="hero-button">
+            <button className="hero-button" onClick={handleOrderClick}>
               <span className="button-icon">☕</span>
               Đặt hàng ngay
             </button>
