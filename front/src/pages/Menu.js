@@ -1,15 +1,63 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Header from '../components/Header';
+import cakeService from '../services/cakeService';
+import drinkService from '../services/drinkService';
+import orderService from '../services/orderService';
+import { useAuth } from '../contexts/AuthContext';
 import '../css/Menu.css';
 
 const Menu = () => {
   const [activeFilter, setActiveFilter] = useState('All');
   const [cart, setCart] = useState({});
   const [itemQuantities, setItemQuantities] = useState({});
+  const [drinks, setDrinks] = useState([]);
+  const [cakes, setCakes] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  
+  const { user, isAuthenticated } = useAuth();
+
+  // Fetch data from API
+  useEffect(() => {
+    const fetchMenuData = async () => {
+      try {
+        setLoading(true);
+        const [drinksResponse, cakesResponse] = await Promise.all([
+          drinkService.getAllDrinks(),
+          cakeService.getAllCakes()
+        ]);
+        
+        setDrinks(drinksResponse);
+        setCakes(cakesResponse);
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching menu data:', err);
+        setError('Không thể tải dữ liệu thực đơn. Vui lòng thử lại sau.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMenuData();
+  }, []);
 
   // Helper functions for cart management
-  const getItemPrice = (priceString) => {
-    return parseFloat(priceString.replace('$', ''));
+  const getItemPrice = (price) => {
+    // Handle undefined, null, or empty price
+    if (!price && price !== 0) return 0;
+    
+    // If price is already a number, return it
+    if (typeof price === 'number') return price;
+    
+    // If price is a string, remove $ and parse
+    if (typeof price === 'string') {
+      const cleanPrice = price.replace(/[$,]/g, '');
+      const parsed = parseFloat(cleanPrice);
+      return isNaN(parsed) ? 0 : parsed;
+    }
+    
+    return 0;
   };
 
   const getItemQuantity = (itemId) => {
@@ -72,102 +120,32 @@ const Menu = () => {
   console.log('Cart items:', cartItems);
   console.log('Cart count:', cartItemCount);
 
-  const menuData = {
-    coffee: [
-      {
-        id: 1,
-        name: 'Espresso',
-        description: 'Cà phê đậm đặc, nguyên chất với hương vị đậm nét',
-        price: '$3.50',
-        category: 'Espresso',
-        image: '☕'
-      },
-      {
-        id: 2,
-        name: 'Double Espresso',
-        description: 'Gấp đôi cường độ, gấp đôi sự hài lòng',
-        price: '$4.50',
-        category: 'Espresso',
-        image: '☕'
-      },
-      {
-        id: 3,
-        name: 'Americano',
-        description: 'Espresso hòa với nước nóng, vị nhẹ và mượt',
-        price: '$3.75',
-        category: 'Espresso',
-        image: '☕'
-      },
-      {
-        id: 4,
-        name: 'Latte',
-        description: 'Espresso hòa kem sữa hấp, mịn và ngậy',
-        price: '$4.50',
-        category: 'Latte',
-        image: '🥛'
-      },
-      {
-        id: 5,
-        name: 'Caramel Latte',
-        description: 'Vị caramel ngọt dịu kết hợp cùng espresso và sữa',
-        price: '$5.00',
-        category: 'Latte',
-        image: '🥛'
-      },
-      {
-        id: 6,
-        name: 'Vanilla Latte',
-        description: 'Hương vanilla dịu nhẹ cùng sữa tươi đánh bọt',
-        price: '$5.00',
-        category: 'Latte',
-        image: '🥛'
-      },
-      {
-        id: 7,
-        name: 'Cappuccino',
-        description: 'Klassic Ý với lớp bọt sữa dày và vị cân bằng',
-        price: '$4.25',
-        category: 'Cappuccino',
-        image: '☕'
-      },
-      {
-        id: 8,
-        name: 'Mocha Cappuccino',
-        description: 'Cappuccino pha cùng socola, vị ngọt dịu và đậm đà',
-        price: '$4.75',
-        category: 'Cappuccino',
-        image: '☕'
-      }
-    ],
-    pastries: [
-      {
-        id: 9,
-        name: 'Bánh sừng bò (Croissant)',
-        description: 'Bánh bơ giòn, xốp, nướng hàng ngày',
-        price: '$2.99',
-        category: 'Pastries',
-        image: '🥐'
-      },
-      {
-        id: 10,
-        name: 'Bánh muffin socola',
-        description: 'Muffin socola đậm với vụn socola bên trong',
-        price: '$3.50',
-        category: 'Pastries',
-        image: '🧁'
-      },
-      {
-        id: 11,
-        name: 'Bánh Danish hạnh nhân',
-        description: 'Bánh ngọt với nhân kem hạnh nhân thơm ngon',
-        price: '$3.75',
-        category: 'Pastries',
-        image: '🥐'
-      }
-    ]
-  };
+  // Transform API data to menu format
+  const transformedDrinks = drinks.map(drink => ({
+    id: `drink_${drink.id}`,
+    name: drink.name || 'Đồ uống',
+    description: drink.category ? `${drink.category} - Đồ uống thơm ngon` : 'Đồ uống thơm ngon',
+    price: drink.basePrice || 0, // Drinks sử dụng basePrice theo backend model
+    category: drink.category || 'Default',
+    image: drink.imageUrl || '☕',
+    type: 'drink',
+    stock: drink.stock || 0,
+    originalId: drink.id
+  }));
 
-  const allItems = [...menuData.coffee, ...menuData.pastries];
+  const transformedCakes = cakes.map(cake => ({
+    id: `cake_${cake.id}`,
+    name: cake.name || 'Bánh ngọt',
+    description: 'Bánh ngọt thơm ngon, được làm thủ công', // Backend không có description field
+    price: cake.price || 0, // Cakes sử dụng price theo backend model
+    category: 'Pastries',
+    image: cake.imageUrl || '🧁',
+    type: 'cake',
+    stock: cake.stock || 0,
+    originalId: cake.id
+  }));
+
+  const allItems = [...transformedDrinks, ...transformedCakes];
   
   const filterItems = (categoryKey) => {
     if (categoryKey === 'All') return allItems;
@@ -178,9 +156,7 @@ const Menu = () => {
 
   const categories = [
     { key: 'All', label: 'Tất cả' },
-    { key: 'Espresso', label: 'Espresso' },
-    { key: 'Latte', label: 'Latte' },
-    { key: 'Cappuccino', label: 'Cappuccino' },
+    { key: 'Drink', label: 'Đồ uống' },
     { key: 'Pastries', label: 'Bánh ngọt' }
   ];
 
@@ -190,18 +166,98 @@ const Menu = () => {
     switch (key) {
       case 'All':
         return 'Khám phá toàn bộ thực đơn của chúng tôi';
-      case 'Espresso':
-        return 'Các đồ uống espresso đậm đà và mạnh mẽ';
-      case 'Latte':
-        return 'Đồ uống sữa với espresso, mềm mại và thơm';
-      case 'Cappuccino':
-        return 'Các món cổ điển kiểu Ý với lớp bọt sữa dày';
+      case 'Drink':
+        return 'Các đồ uống thơm ngon từ cà phê đến trà';
       case 'Pastries':
         return 'Bánh nướng tươi ngon, phù hợp dùng kèm cà phê';
       default:
         return '';
     }
   };
+
+  // Checkout function
+  const handleCheckout = async () => {
+    if (!isAuthenticated) {
+      alert('Vui lòng đăng nhập để đặt hàng');
+      return;
+    }
+
+    if (cartItems.length === 0) {
+      alert('Giỏ hàng trống!');
+      return;
+    }
+
+    setCheckoutLoading(true);
+
+    try {
+      // Transform cart items to match API schema
+      const orderItems = cartItems.map(item => {
+        return {
+          productId: item.originalId,
+          productType: item.type, // "cake" or "drink"
+          productName: item.name,
+          quantity: item.quantity,
+          unitPrice: getItemPrice(item.price),
+          toppings: [] // For now, no toppings. Can be extended later
+        };
+      });
+
+      const orderData = {
+        userId: user?.id || user?.username, // Adjust based on your user object structure
+        items: orderItems,
+        totalPrice: cartTotal,
+        status: "Pending"
+      };
+
+      console.log('Order data being sent:', orderData);
+
+      const token = localStorage.getItem('token');
+      const response = await orderService.createOrder(orderData, token);
+      
+      console.log('Order created successfully:', response);
+      alert('Đặt hàng thành công! Mã đơn hàng: #' + response.id);
+      
+      // Clear cart after successful order
+      setCart({});
+      setItemQuantities({});
+      
+      // Optionally redirect to orders page
+      // navigate('/orders');
+      
+    } catch (error) {
+      console.error('Error creating order:', error);
+      if (error.response?.data?.message) {
+        alert('Lỗi: ' + error.response.data.message);
+      } else {
+        alert('Có lỗi xảy ra khi đặt hàng. Vui lòng thử lại.');
+      }
+    } finally {
+      setCheckoutLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="menu-page">
+        <Header />
+        <div className="loading-container">
+          <p>Đang tải thực đơn...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="menu-page">
+        <Header />
+        <div className="error-container">
+          <p>{error}</p>
+          <button onClick={() => window.location.reload()}>Thử lại</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="menu-page">
@@ -225,9 +281,7 @@ const Menu = () => {
                 >
                   <span className="category-icon">
                     {category.key === 'All' && '🍽️'}
-                    {category.key === 'Espresso' && '☕'}
-                    {category.key === 'Latte' && '🥛'}
-                    {category.key === 'Cappuccino' && '☕'}
+                    {category.key === 'Drink' && '☕'}
                     {category.key === 'Pastries' && '🥐'}
                   </span>
                   {category.label}
@@ -248,7 +302,7 @@ const Menu = () => {
             </div>
 
             {/* Cart Summary */}
-            {cartItemCount > 0 && (
+            {cartItemCount > 0 ? (
               <div className="cart-summary">
                 <div className="cart-header">
                   <h3 className="cart-title">
@@ -260,33 +314,41 @@ const Menu = () => {
                 <div className="cart-items">
                   {cartItems.map((item) => (
                     <div key={item.id} className="cart-item">
+                      <div className="cart-item-emoji">{item.image}</div>
                       <div className="cart-item-info">
-                        <span className="cart-item-emoji">{item.image}</span>
                         <div className="cart-item-details">
                           <p className="cart-item-name">{item.name}</p>
-                          <p className="cart-item-price">{item.price} x {item.quantity}</p>
+                          <p className="cart-item-price">
+                            ₫{getItemPrice(item.price).toLocaleString()} x {item.quantity}
+                          </p>
+                          <p className="cart-item-subtotal">
+                            Tổng: ₫{(getItemPrice(item.price) * item.quantity).toLocaleString()}
+                          </p>
                         </div>
-                      </div>
-                      <div className="cart-item-controls">
-                        <button 
-                          className="cart-qty-btn"
-                          onClick={() => updateCartQuantity(item.id, item.quantity - 1)}
-                        >
-                          -
-                        </button>
-                        <span className="cart-qty">{item.quantity}</span>
-                        <button 
-                          className="cart-qty-btn"
-                          onClick={() => updateCartQuantity(item.id, item.quantity + 1)}
-                        >
-                          +
-                        </button>
-                        <button 
-                          className="cart-remove-btn"
-                          onClick={() => removeFromCart(item.id)}
-                        >
-                          ×
-                        </button>
+                        <div className="cart-item-controls">
+                          <div className="cart-qty-controls">
+                            <button 
+                              className="cart-qty-btn"
+                              onClick={() => updateCartQuantity(item.id, item.quantity - 1)}
+                            >
+                              -
+                            </button>
+                            <span className="cart-qty">{item.quantity}</span>
+                            <button 
+                              className="cart-qty-btn"
+                              onClick={() => updateCartQuantity(item.id, item.quantity + 1)}
+                            >
+                              +
+                            </button>
+                          </div>
+                          <button 
+                            className="cart-remove-btn"
+                            onClick={() => removeFromCart(item.id)}
+                            title="Xóa khỏi giỏ hàng"
+                          >
+                            ×
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -294,15 +356,30 @@ const Menu = () => {
                 
                 <div className="cart-total">
                   <div className="total-line">
-                    <span className="total-label">Tổng:</span>
-                    <span className="total-amount">${cartTotal.toFixed(2)}</span>
+                    <span className="total-label">Tổng cộng:</span>
+                    <span className="total-amount">₫{cartTotal.toLocaleString()}</span>
+                  </div>
+                  <div className="total-info">
+                    <small>{cartItemCount} món trong giỏ hàng</small>
                   </div>
                 </div>
                 
-                <button className="checkout-btn">
-                  <span className="btn-icon">💳</span>
-                  Thanh toán
+                <button 
+                  className="checkout-btn" 
+                  onClick={handleCheckout}
+                  disabled={checkoutLoading || cartItems.length === 0}
+                >
+                  <span className="btn-icon">
+                    {checkoutLoading ? '⏳' : '💳'}
+                  </span>
+                  {checkoutLoading ? 'Đang xử lý...' : 'Thanh toán'}
                 </button>
+              </div>
+            ) : (
+              <div className="empty-cart">
+                <div className="empty-cart-icon">🛒</div>
+                <p>Giỏ hàng trống</p>
+                <small>Thêm món yêu thích vào giỏ hàng</small>
               </div>
             )}
 
@@ -323,7 +400,17 @@ const Menu = () => {
               {filteredItems.map((item) => (
                 <div key={item.id} className="menu-item-card">
                   <div className="item-image">
-                    <span className="item-emoji">{item.image}</span>
+                    {item.image && item.image.startsWith('http') ? (
+                      <img src={item.image} alt={item.name} className="product-img" />
+                    ) : (
+                      <span className="item-emoji">{item.image}</span>
+                    )}
+                    {item.stock <= 5 && item.stock > 0 && (
+                      <div className="stock-warning">Còn ít!</div>
+                    )}
+                    {item.stock === 0 && (
+                      <div className="out-of-stock">Hết hàng</div>
+                    )}
                   </div>
                   <div className="item-details">
                     <div className="item-header">
@@ -331,12 +418,18 @@ const Menu = () => {
                       <button className="favorite-btn">♡</button>
                     </div>
                     <p className="item-description">{item.description}</p>
+                    <div className="item-stock-info">
+                      <span className="stock-label">
+                        Kho: {item.stock > 0 ? item.stock : 'Hết hàng'}
+                      </span>
+                    </div>
                     <div className="item-footer">
-                      <span className="item-price">{item.price}</span>
+                      <span className="item-price">₫{getItemPrice(item.price).toLocaleString()}</span>
                       <div className="item-actions">
                         <button 
                           className="quantity-btn"
                           onClick={() => updateQuantity(item.id, getItemQuantity(item.id) - 1)}
+                          disabled={item.stock === 0}
                         >
                           -
                         </button>
@@ -344,6 +437,7 @@ const Menu = () => {
                         <button 
                           className="quantity-btn"
                           onClick={() => updateQuantity(item.id, getItemQuantity(item.id) + 1)}
+                          disabled={item.stock === 0 || getItemQuantity(item.id) >= item.stock}
                         >
                           +
                         </button>
