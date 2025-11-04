@@ -13,80 +13,59 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
+  // Check authentication on app load
   useEffect(() => {
-    const initializeAuth = () => {
+    const checkAuth = async () => {
       try {
         const currentUser = authService.getCurrentUser();
-        const authenticated = authService.isAuthenticated();
-        
-        console.log('Initializing auth:', { currentUser, authenticated });
-        
-        setUser(currentUser);
-        setIsAuthenticated(authenticated);
+        if (currentUser && authService.isAuthenticated()) {
+          setUser(currentUser);
+        }
       } catch (error) {
-        console.error('Error initializing auth:', error);
-        setUser(null);
-        setIsAuthenticated(false);
+        console.error('Auth check error:', error);
+        // Clear invalid auth data
+        authService.logout();
       } finally {
-        setLoading(false);
+        setIsLoading(false);
       }
     };
 
-    initializeAuth();
+    checkAuth();
   }, []);
 
-  const login = async (username, password) => {
-    try {
-      setLoading(true);
-      const response = await authService.login(username, password);
-      
-      const userData = response.user || { username };
-      setUser(userData);
-      setIsAuthenticated(true);
-      
-      console.log('Login successful:', userData);
-      return userData; // Return user data instead of response
-    } catch (error) {
-      console.error('Login failed:', error);
-      setUser(null);
-      setIsAuthenticated(false);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
+  // Login function - updated for Cognito tokens
+  const login = async (userData, tokens) => {
+    setUser(userData);
+    // Tokens are already saved in authService.login()
   };
 
-  const logout = () => {
-    authService.logout();
-    setUser(null);
-    setIsAuthenticated(false);
-    console.log('User logged out');
-  };
-
+  // Register function - không auto login
   const register = async (userData) => {
+    // Không set user vì cần confirm trước
+    return userData;
+  };
+
+  // Logout function
+  const logout = async () => {
     try {
-      setLoading(true);
-      const response = await authService.register(userData);
-      console.log('Registration successful:', response);
-      return response;
+      await authService.logout();
     } catch (error) {
-      console.error('Registration failed:', error);
-      throw error;
+      console.error('Logout error:', error);
     } finally {
-      setLoading(false);
+      setUser(null);
     }
   };
 
   const value = {
     user,
+    isLoading,
     login,
-    logout,
     register,
-    isAuthenticated,
-    loading
+    logout,
+    isAuthenticated: () => authService.isAuthenticated(),
+    isAdmin: () => authService.isAdmin()
   };
 
   return (

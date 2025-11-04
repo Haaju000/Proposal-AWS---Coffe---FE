@@ -13,6 +13,7 @@ import LoyaltyProgram from './components/LoyaltyProgram';
 import Testimonials from './components/Testimonials';
 import Footer from './components/Footer';
 import ScrollToTop from './components/ScrollToTop';
+import Confirmation from './pages/Confirmation';
 
 // Import pages
 import Menu from './pages/Menu';
@@ -57,6 +58,7 @@ function App() {
           <Route path="/contact" element={<Contact />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/confirm" element={<Confirmation />} />
           <Route 
             path="/admin" 
             element={

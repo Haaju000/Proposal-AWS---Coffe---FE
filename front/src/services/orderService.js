@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:5263'; // Khớp với backend C#
+const API_BASE_URL = 'http://localhost:5144'; // Khớp với backend C#
 
 const orderService = {
   // POST /api/order - Tạo đơn hàng mới

@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { authService } from '../services/authService';
 import Header from '../components/Header';
+import Footer from '../components/Footer';
 import '../css/Auth.css';
 
 const Login = () => {
@@ -20,11 +22,11 @@ const Login = () => {
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData({
-      ...formData,
+    setFormData(prev => ({
+      ...prev,
       [name]: type === 'checkbox' ? checked : value
-    });
-    // Clear error when user starts typing
+    }));
+    // Clear error khi user bắt đầu nhập
     if (error) setError('');
   };
 
@@ -34,19 +36,47 @@ const Login = () => {
     setError('');
 
     try {
-      console.log('Login attempt:', formData);
-      const userData = await login(formData.username, formData.password);
-      console.log('Login successful, redirecting...');
-      
-      // Check if user is admin and redirect accordingly
-      if (userData && userData.username === 'admin') {
-        navigate('/admin'); // Redirect admin to dashboard
-      } else {
-        navigate('/'); // Redirect regular users to home page
+      // Validate input
+      if (!formData.username.trim()) {
+        throw { message: 'Vui lòng nhập tên đăng nhập.' };
+      }
+      if (!formData.password.trim()) {
+        throw { message: 'Vui lòng nhập mật khẩu.' };
+      }
+
+      // Call authService login
+      const result = await authService.login(
+        formData.username.trim(),
+        formData.password
+      );
+
+      if (result.success) {
+        // Update auth context
+        await login(result.user, result.tokens);
+        
+        // Navigate based on user role
+        const userRole = result.user?.role;
+        if (userRole === 'Admin') {
+          navigate('/admin', { replace: true });
+        } else {
+          navigate('/', { replace: true });
+        }
       }
     } catch (error) {
       console.error('Login error:', error);
-      setError(error.message || 'Đăng nhập thất bại. Vui lòng kiểm tra thông tin và thử lại.');
+      setError(error.message || 'Đăng nhập thất bại. Vui lòng thử lại.');
+      
+      // Nếu user chưa confirm, redirect đến confirmation page
+      if (error.message && error.message.includes('chưa được xác thực')) {
+        setTimeout(() => {
+          navigate('/confirm', { 
+            state: { 
+              username: formData.username.trim(),
+              fromLogin: true 
+            } 
+          });
+        }, 2000);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -55,42 +85,57 @@ const Login = () => {
   return (
     <div className="auth-page">
       <Header />
-      
       <main className="auth-main">
         <div className="auth-container">
           <div className="auth-content">
-            {/* Left side - Brand info */}
+            {/* Brand Section */}
             <div className="auth-brand">
               <div className="brand-content">
                 <div className="brand-logo">
-                  <span className="logo-icon">☕</span>
-                  <span className="logo-text">Cozy Brew</span>
+                  ☕ Coffee Admin
                 </div>
                 <h1>Chào mừng trở lại!</h1>
-                <p>Đăng nhập vào tài khoản để truy cập tính năng độc quyền, theo dõi đơn hàng và nhận gợi ý cá nhân hóa.</p>
+                <p>Đăng nhập để quản lý hệ thống coffee shop của bạn với các tính năng mạnh mẽ và giao diện thân thiện.</p>
                 <div className="brand-features">
                   <div className="feature-item">
-                    <span className="feature-icon">🎯</span>
-                    <span>Gợi ý cá nhân</span>
+                    <span className="feature-icon">📊</span>
+                    <span>Quản lý bán hàng</span>
                   </div>
                   <div className="feature-item">
-                    <span className="feature-icon">📦</span>
-                    <span>Theo dõi đơn hàng</span>
+                    <span className="feature-icon">👥</span>
+                    <span>Quản lý khách hàng</span>
                   </div>
                   <div className="feature-item">
-                    <span className="feature-icon">⭐</span>
-                    <span>Ưu đãi tích điểm</span>
+                    <span className="feature-icon">📈</span>
+                    <span>Báo cáo thống kê</span>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Right side - Login form */}
+            {/* Form Section */}
             <div className="auth-form-section">
               <div className="auth-form-container">
                 <h2>Đăng nhập</h2>
-                <p className="auth-subtitle">Nhập thông tin để truy cập tài khoản</p>
-                
+                <p className="auth-subtitle">Nhập thông tin đăng nhập của bạn</p>
+
+                {error && (
+                  <div style={{
+                    background: '#FEF2F2',
+                    border: '1px solid #FECACA',
+                    color: '#DC2626',
+                    padding: '1rem',
+                    borderRadius: '8px',
+                    marginBottom: '1rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem'
+                  }}>
+                    <span>⚠️</span>
+                    {error}
+                  </div>
+                )}
+
                 <form onSubmit={handleSubmit} className="auth-form">
                   <div className="form-group">
                     <label htmlFor="username">Tên đăng nhập</label>
@@ -100,8 +145,9 @@ const Login = () => {
                       name="username"
                       value={formData.username}
                       onChange={handleChange}
-                      required
-                      placeholder="Nhập tên đăng nhập"
+                      placeholder="Nhập tên đăng nhập của bạn"
+                      disabled={isLoading}
+                      autoComplete="username"
                     />
                   </div>
 
@@ -114,13 +160,15 @@ const Login = () => {
                         name="password"
                         value={formData.password}
                         onChange={handleChange}
-                        required
-                        placeholder="Nhập mật khẩu"
+                        placeholder="Nhập mật khẩu của bạn"
+                        disabled={isLoading}
+                        autoComplete="current-password"
                       />
                       <button
                         type="button"
                         className="password-toggle"
                         onClick={() => setShowPassword(!showPassword)}
+                        disabled={isLoading}
                       >
                         {showPassword ? '👁️' : '👁️‍🗨️'}
                       </button>
@@ -134,53 +182,36 @@ const Login = () => {
                         name="rememberMe"
                         checked={formData.rememberMe}
                         onChange={handleChange}
+                        disabled={isLoading}
                       />
-                      <span className="checkmark"></span>
                       Ghi nhớ đăng nhập
                     </label>
-                    <a href="#forgot" className="forgot-link">Quên mật khẩu?</a>
+                    <Link to="/forgot-password" className="forgot-link">
+                      Quên mật khẩu?
+                    </Link>
                   </div>
 
-                  {error && (
-                    <div className="error-message">
-                      {error}
-                    </div>
-                  )}
-
-                  <button type="submit" className="auth-submit-btn" disabled={isLoading}>
+                  <button 
+                    type="submit" 
+                    className="auth-submit-btn" 
+                    disabled={isLoading}
+                  >
                     {isLoading ? 'Đang đăng nhập...' : 'Đăng nhập'}
                   </button>
                 </form>
 
-                <div className="auth-divider">
-                  <span>hoặc</span>
-                </div>
-
-                <div className="social-login">
-                  <button className="social-btn google-btn">
-                    <span className="social-icon">G</span>
-                    Tiếp tục với Google
-                  </button>
-                  <button className="social-btn facebook-btn">
-                    <span className="social-icon">f</span>
-                    Tiếp tục với Facebook
-                  </button>
-                </div>
-
-                <p className="auth-switch">
-                  Chưa có tài khoản? 
-                  <Link 
-                    to="/register"
-                    className="switch-link"
-                  >
-                    Đăng ký tại đây
+                <div className="auth-switch">
+                  Chưa có tài khoản?
+                  <Link to="/register" className="switch-link">
+                    Đăng ký ngay
                   </Link>
-                </p>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </main>
+      <Footer />
     </div>
   );
 };
