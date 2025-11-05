@@ -3,9 +3,9 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 const ProtectedRoute = ({ children, adminOnly = false }) => {
-  const { isAuthenticated, user, loading } = useAuth();
+  const { isAuthenticated, user, isLoading } = useAuth();
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div style={{
         display: 'flex',
@@ -20,11 +20,16 @@ const ProtectedRoute = ({ children, adminOnly = false }) => {
     );
   }
 
-  if (!isAuthenticated) {
+  // call the isAuthenticated function if provided
+  if (!isAuthenticated || !isAuthenticated()) {
     return <Navigate to="/login" replace />;
   }
 
-  if (adminOnly && user?.username !== 'admin') {
+  // Normalize role/username checks
+  const role = user?.role ? String(user.role).toLowerCase() : undefined;
+  const username = user?.username ? String(user.username).toLowerCase() : undefined;
+
+  if (adminOnly && role !== 'admin' && username !== 'admin') {
     return <Navigate to="/" replace />;
   }
 

@@ -3,9 +3,10 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 const AdminRoute = ({ children }) => {
-  const { user, isAuthenticated, loading } = useAuth();
-  
-  if (loading) {
+  // useAuth provides `isLoading` (boolean) and `isAuthenticated` (function)
+  const { user, isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
     return (
       <div style={{ 
         display: 'flex', 
@@ -17,17 +18,20 @@ const AdminRoute = ({ children }) => {
       </div>
     );
   }
-  
-  // Check if user is authenticated and is admin
-  if (!isAuthenticated) {
+
+  // Ensure we call the isAuthenticated function
+  if (!isAuthenticated || !isAuthenticated()) {
     return <Navigate to="/login" replace />;
   }
-  
-  // Check if user has admin role
-  if (user?.role !== 'admin' && user?.username !== 'admin') {
+
+  // Normalize role comparison so both 'Admin' and 'admin' match
+  const role = user?.role ? String(user.role).toLowerCase() : undefined;
+  const username = user?.username ? String(user.username).toLowerCase() : undefined;
+
+  if (role !== 'admin' && username !== 'admin') {
     return <Navigate to="/" replace />;
   }
-  
+
   return children;
 };
 
