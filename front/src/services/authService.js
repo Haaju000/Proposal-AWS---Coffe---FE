@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-// URL backend C# của bạn
-const API_BASE_URL = 'http://localhost:5144/api';
+// URL backend C# của bạn - Swagger port 5000
+const API_BASE_URL = 'http://localhost:5000/api';
 
 // Tạo axios instance
 const apiClient = axios.create({

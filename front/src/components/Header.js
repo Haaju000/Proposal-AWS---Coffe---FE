@@ -1,12 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useCart } from '../contexts/CartContext';
 import '../css/Header.css';
 
 const Header = () => {
   const location = useLocation();
   const { user, isAuthenticated, logout } = useAuth();
+  const { cartItems, cartItemCount, cartTotal, getItemPrice } = useCart();
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showCartMenu, setShowCartMenu] = useState(false);
+  const cartMenuRef = useRef(null);
   
   const isActive = (path) => {
     if (path === '/') {
@@ -29,6 +33,32 @@ const Header = () => {
     setTimeout(() => setShowUserMenu(false), 150);
   };
 
+  // Cart menu handlers
+  const toggleCartMenu = () => {
+    setShowCartMenu(!showCartMenu);
+  };
+
+  const closeCartMenu = () => {
+    setShowCartMenu(false);
+  };
+
+  // Close cart menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (cartMenuRef.current && !cartMenuRef.current.contains(event.target)) {
+        setShowCartMenu(false);
+      }
+    };
+
+    if (showCartMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showCartMenu]);
+
   return (
     <header className="header">
       <div className="header-container">
@@ -45,11 +75,77 @@ const Header = () => {
         </nav>
         
         <div className="header-actions">
-          <div className="cart-icon">
-            <span className="cart-count">0</span>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <path d="M3 3H5L5.4 5M7 13H17L21 5H5.4M7 13L5.4 5M7 13L4.7 15.3C4.3 15.7 4.6 16.5 5.1 16.5H17M17 13V16.5M9 19.5C9.8 19.5 10.5 20.2 10.5 21S9.8 22.5 9 22.5 7.5 21.8 7.5 21 8.2 19.5 9 19.5ZM20 19.5C20.8 19.5 21.5 20.2 21.5 21S20.8 22.5 20 22.5 18.5 21.8 18.5 21 19.2 19.5 20 19.5Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
+          {/* Cart Menu */}
+          <div className="cart-menu" ref={cartMenuRef}>
+            <div className="cart-icon" onClick={toggleCartMenu}>
+              {cartItemCount > 0 && <span className="cart-count">{cartItemCount}</span>}
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <path d="M3 3H5L5.4 5M7 13H17L21 5H5.4M7 13L5.4 5M7 13L4.7 15.3C4.3 15.7 4.6 16.5 5.1 16.5H17M17 13V16.5M9 19.5C9.8 19.5 10.5 20.2 10.5 21S9.8 22.5 9 22.5 7.5 21.8 7.5 21 8.2 19.5 9 19.5ZM20 19.5C20.8 19.5 21.5 20.2 21.5 21S20.8 22.5 20 22.5 18.5 21.8 18.5 21 19.2 19.5 20 19.5Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+
+            {/* Cart Dropdown */}
+            {showCartMenu && (
+              <div className="cart-dropdown">
+                <div className="cart-dropdown-header">
+                  <div className="cart-header-content">
+                    <div className="cart-title-section">
+                      <div className="cart-title-icon">🛒</div>
+                      <div className="cart-title-text">
+                        <h3>Giỏ hàng</h3>
+                        <p>{cartItemCount} sản phẩm</p>
+                      </div>
+                    </div>
+                    <button className="close-cart-btn" onClick={closeCartMenu}>
+                      ✕
+                    </button>
+                  </div>
+                </div>
+
+                {cartItems.length === 0 ? (
+                  <div className="empty-cart-message">
+                    <div className="empty-cart-icon">🛒</div>
+                    <p className="empty-cart-text">Giỏ hàng của bạn đang trống</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="cart-dropdown-items">
+                      {cartItems.map((item) => (
+                        <div key={item.id} className="cart-preview-item">
+                          <div className="preview-item-image">
+                            <span className="preview-item-emoji">{item.image}</span>
+                          </div>
+                          <div className="preview-item-content">
+                            <div className="preview-item-name">{item.name}</div>
+                            <div className="preview-item-details">
+                              <span className="preview-quantity">x{item.quantity}</span>
+                              <span className="preview-price">₫{getItemPrice(item.price).toLocaleString()}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="cart-dropdown-footer">
+                      <div className="cart-total-preview">
+                        <span className="total-label">Tổng cộng:</span>
+                        <span className="total-amount">₫{cartTotal.toLocaleString()}</span>
+                      </div>
+                      <div className="cart-dropdown-actions">
+                        <Link to="/menu" className="view-cart-btn" onClick={closeCartMenu}>
+                          <span>👁️</span>
+                          Xem giỏ hàng
+                        </Link>
+                        <button className="checkout-btn">
+                          <span>💳</span>
+                          Thanh toán
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </div>
           
           {isAuthenticated && user ? (

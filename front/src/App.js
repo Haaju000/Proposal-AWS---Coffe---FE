@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
+import { CartProvider } from './contexts/CartContext';
 import './css/globals.css';
 import './App.css';
 
@@ -49,9 +50,10 @@ const Home = () => {
 function App() {
   return (
     <AuthProvider>
-      <Router>
-        <ScrollToTop />
-        <Routes>
+      <CartProvider>
+        <Router>
+          <ScrollToTop />
+          <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/menu" element={<Menu />} />
           <Route path="/about" element={<About />} />
@@ -92,7 +94,8 @@ function App() {
             } 
           />
         </Routes>
-      </Router>
+        </Router>
+      </CartProvider>
     </AuthProvider>
   );
 }

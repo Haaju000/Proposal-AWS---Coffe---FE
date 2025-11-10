@@ -1,70 +1,143 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:5144'; // Khớp với backend C#
+// API base URL - match với Swagger backend
+const API_BASE_URL = 'http://localhost:5000/api';
+
+// Create axios instance
+const apiClient = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  timeout: 10000, // 10 second timeout
+});
+
+console.log('✅ OrderService initialized with base URL:', API_BASE_URL);
+
+// Add token interceptor
+apiClient.interceptors.request.use(
+  (config) => {
+    // Get token - try multiple storage keys
+    const token = localStorage.getItem('access_token') 
+                  || localStorage.getItem('id_token')
+                  || localStorage.getItem('token');
+
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    
+    console.log('🔑 Request with token:', token ? 'Present' : 'Missing');
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
 const orderService = {
-  // POST /api/order - Tạo đơn hàng mới
-  createOrder: async (orderData, token) => {
+  // Create order - match backend API exactly
+  createOrder: async (orderData) => {
     try {
-      console.log('Sending order data:', orderData);
-      const response = await axios.post(`${API_BASE_URL}/api/order`, orderData, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      console.log('🚀 Creating order with data:', orderData);
+      
+      const response = await apiClient.post('/Order', orderData);
+      
+      console.log('✅ Order created successfully:', response.data);
       return response.data;
     } catch (error) {
-      console.error('Error creating order:', error.response?.data || error);
+      console.error('❌ Order creation error:', error);
+      
+      // Enhanced error handling
+      if (error.response?.data?.error) {
+        throw new Error(error.response.data.error);
+      } else if (error.response?.data?.message) {
+        throw new Error(error.response.data.message);
+      } else if (error.message) {
+        throw new Error(error.message);
+      } else {
+        throw new Error('Không thể tạo đơn hàng. Vui lòng thử lại.');
+      }
+    }
+  },
+
+  // Validate order item before adding to cart
+  validateOrderItem: async (orderItem) => {
+    try {
+      console.log('🔍 Validating item:', orderItem);
+      const response = await apiClient.post('/OrderItem/validate', orderItem);
+      console.log('✅ Item validation successful:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Item validation error:', error);
+      if (error.response?.data?.error) {
+        throw new Error(error.response.data.error);
+      }
       throw error;
     }
   },
 
-  // GET /api/order - Lấy tất cả đơn hàng của user hiện tại
-  getUserOrders: async (token) => {
+  // Apply voucher to order
+  applyVoucher: async (orderId, voucherCode) => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/order`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+      console.log('🎫 Applying voucher:', { orderId, voucherCode });
+      const response = await apiClient.post(`/Order/${orderId}/apply-voucher`, {
+        voucherCode: voucherCode
       });
+      console.log('✅ Voucher applied successfully:', response.data);
       return response.data;
     } catch (error) {
-      console.error('Error fetching user orders:', error);
+      console.error('❌ Apply voucher error:', error);
+      if (error.response?.data?.error) {
+        throw new Error(error.response.data.error);
+      }
       throw error;
     }
   },
 
-  // GET /api/order/{id} - Lấy đơn hàng theo ID
-  getOrderById: async (id, token) => {
+  // Get order by ID
+  getOrderById: async (orderId) => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/order/${id}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      console.log('📋 Getting order by ID:', orderId);
+      const response = await apiClient.get(`/Order/${orderId}`);
+      console.log('✅ Order retrieved successfully:', response.data);
       return response.data;
     } catch (error) {
-      console.error('Error fetching order by id:', error);
+      console.error('❌ Get order error:', error);
+      if (error.response?.data?.error) {
+        throw new Error(error.response.data.error);
+      }
       throw error;
     }
   },
 
-  // PATCH /api/order/{id}/status - Cập nhật trạng thái đơn hàng (admin only)
-  updateOrderStatus: async (id, status, token) => {
+  // Get all orders (Admin only)
+  getAllOrders: async () => {
     try {
-      const response = await axios.patch(`${API_BASE_URL}/api/order/${id}/status`, 
-        { status }, 
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
+      console.log('📋 Getting all orders...');
+      const response = await apiClient.get('/Order');
+      console.log('✅ All orders retrieved successfully');
       return response.data;
     } catch (error) {
-      console.error('Error updating order status:', error);
+      console.error('❌ Get all orders error:', error);
+      if (error.response?.data?.error) {
+        throw new Error(error.response.data.error);
+      }
+      throw error;
+    }
+  },
+
+  // Update order status (Admin only)
+  updateOrderStatus: async (orderId, status) => {
+    try {
+      console.log('📝 Updating order status:', { orderId, status });
+      const response = await apiClient.put(`/Order/${orderId}/status`, {
+        status: status
+      });
+      console.log('✅ Order status updated successfully:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Update order status error:', error);
+      if (error.response?.data?.error) {
+        throw new Error(error.response.data.error);
+      }
       throw error;
     }
   },

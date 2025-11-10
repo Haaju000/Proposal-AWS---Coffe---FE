@@ -4,12 +4,11 @@ import cakeService from '../services/cakeService';
 import drinkService from '../services/drinkService';
 import orderService from '../services/orderService';
 import { useAuth } from '../contexts/AuthContext';
+import { useCart } from '../contexts/CartContext';
 import '../css/Menu.css';
 
 const Menu = () => {
   const [activeFilter, setActiveFilter] = useState('All');
-  const [cart, setCart] = useState({});
-  const [itemQuantities, setItemQuantities] = useState({});
   const [drinks, setDrinks] = useState([]);
   const [cakes, setCakes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -17,6 +16,18 @@ const Menu = () => {
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   
   const { user, isAuthenticated } = useAuth();
+  const { 
+    cartItems, 
+    cartItemCount, 
+    cartTotal, 
+    addToCart, 
+    removeFromCart, 
+    updateQuantity: updateCartQuantity,
+    clearCart,
+    getItemPrice,
+    isItemInCart,
+    getItemInCart
+  } = useCart();
 
   // Fetch data from API
   useEffect(() => {
@@ -42,29 +53,14 @@ const Menu = () => {
     fetchMenuData();
   }, []);
 
-  // Helper functions for cart management
-  const getItemPrice = (price) => {
-    // Handle undefined, null, or empty price
-    if (!price && price !== 0) return 0;
-    
-    // If price is already a number, return it
-    if (typeof price === 'number') return price;
-    
-    // If price is a string, remove $ and parse
-    if (typeof price === 'string') {
-      const cleanPrice = price.replace(/[$,]/g, '');
-      const parsed = parseFloat(cleanPrice);
-      return isNaN(parsed) ? 0 : parsed;
-    }
-    
-    return 0;
-  };
+  // Helper function for quantity selector
+  const [itemQuantities, setItemQuantities] = useState({});
 
   const getItemQuantity = (itemId) => {
     return itemQuantities[itemId] || 1;
   };
 
-  const updateQuantity = (itemId, newQuantity) => {
+  const updateItemQuantity = (itemId, newQuantity) => {
     if (newQuantity < 1) newQuantity = 1;
     setItemQuantities(prev => ({
       ...prev,
@@ -72,53 +68,18 @@ const Menu = () => {
     }));
   };
 
-  const addToCart = (item) => {
+  const handleAddToCart = (item) => {
     const quantity = getItemQuantity(item.id);
-    setCart(prev => ({
-      ...prev,
-      [item.id]: {
-        ...item,
-        quantity: (prev[item.id]?.quantity || 0) + quantity
-      }
-    }));
+    // Add to cart with specified quantity
+    for (let i = 0; i < quantity; i++) {
+      addToCart(item);
+    }
     // Reset quantity to 1 after adding
     setItemQuantities(prev => ({
       ...prev,
       [item.id]: 1
     }));
   };
-
-  const removeFromCart = (itemId) => {
-    setCart(prev => {
-      const newCart = { ...prev };
-      delete newCart[itemId];
-      return newCart;
-    });
-  };
-
-  const updateCartQuantity = (itemId, newQuantity) => {
-    if (newQuantity <= 0) {
-      removeFromCart(itemId);
-      return;
-    }
-    setCart(prev => ({
-      ...prev,
-      [itemId]: {
-        ...prev[itemId],
-        quantity: newQuantity
-      }
-    }));
-  };
-
-  // Calculate cart totals
-  const cartItems = Object.values(cart);
-  const cartItemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
-  const cartTotal = cartItems.reduce((sum, item) => sum + (getItemPrice(item.price) * item.quantity), 0);
-
-  // Debug logs
-  console.log('Cart state:', cart);
-  console.log('Cart items:', cartItems);
-  console.log('Cart count:', cartItemCount);
 
   // Transform API data to menu format
   const transformedDrinks = drinks.map(drink => ({
@@ -175,6 +136,46 @@ const Menu = () => {
     }
   };
 
+  // Validate cart items trước khi đặt hàng
+  const validateCartItems = async () => {
+    try {
+      console.log('🔍 Validating cart items...');
+      
+      const validationPromises = cartItems.map(async (item) => {
+        const orderItem = {
+          productId: String(item.originalId),
+          productType: item.type === 'drink' ? 'Drink' : 'Cake',
+          quantity: item.quantity,
+          toppingIds: []
+        };
+        
+        try {
+          await orderService.validateOrderItem(orderItem);
+          return { item, valid: true, error: null };
+        } catch (error) {
+          return { item, valid: false, error: error.message };
+        }
+      });
+      
+      const validationResults = await Promise.all(validationPromises);
+      const invalidItems = validationResults.filter(result => !result.valid);
+      
+      if (invalidItems.length > 0) {
+        const errorMessages = invalidItems.map(result => 
+          `• ${result.item.name}: ${result.error}`
+        ).join('\n');
+        
+        throw new Error(`Một số sản phẩm không hợp lệ:\n${errorMessages}`);
+      }
+      
+      console.log('✅ All cart items are valid');
+      return true;
+    } catch (error) {
+      console.error('❌ Cart validation failed:', error);
+      throw error;
+    }
+  };
+
   // Checkout function
   const handleCheckout = async () => {
     if (!isAuthenticated) {
@@ -190,47 +191,92 @@ const Menu = () => {
     setCheckoutLoading(true);
 
     try {
-      // Transform cart items to match API schema
+      console.log('🛒 Starting checkout process...');
+      console.log('📦 Cart items:', cartItems);
+      console.log('👤 User:', user);
+
+      // Validate cart items trước khi đặt hàng
+      await validateCartItems();
+
+      // Transform cart items to match backend CreateOrderRequest format
       const orderItems = cartItems.map(item => {
-        return {
-          productId: item.originalId,
-          productType: item.type, // "cake" or "drink"
-          productName: item.name,
+        const orderItem = {
+          productId: String(item.originalId), // Ensure string type
+          productType: item.type === 'drink' ? 'Drink' : 'Cake', // Capitalize for backend
           quantity: item.quantity,
-          unitPrice: getItemPrice(item.price),
-          toppings: [] // For now, no toppings. Can be extended later
+          toppingIds: [] // No toppings for now, can be extended later
         };
+        
+        console.log('🔄 Transformed item:', orderItem);
+        return orderItem;
       });
 
-      const orderData = {
-        userId: user?.id || user?.username, // Adjust based on your user object structure
-        items: orderItems,
-        totalPrice: cartTotal,
-        status: "Pending"
+      // Create order request - Backend sẽ tự tính giá và lấy userId từ token
+      const orderRequest = {
+        items: orderItems
+        // Không cần userId, totalPrice, status - backend tự xử lý
       };
 
-      console.log('Order data being sent:', orderData);
+      console.log('📤 Order request being sent:', orderRequest);
 
-      const token = localStorage.getItem('token');
-      const response = await orderService.createOrder(orderData, token);
+      // Call orderService
+      const response = await orderService.createOrder(orderRequest);
       
-      console.log('Order created successfully:', response);
-      alert('Đặt hàng thành công! Mã đơn hàng: #' + response.id);
+      console.log('✅ Order created successfully:', response);
+      
+      // Extract order info from response
+      const order = response.order || response;
+      const orderId = order.id || order.orderId || 'N/A';
+      const totalPrice = order.totalPrice || order.finalPrice || cartTotal;
+      const status = order.status || 'Pending';
+      
+      // Show success message with order details
+      alert(`🎉 Đặt hàng thành công!
+
+📋 Mã đơn hàng: #${orderId}
+💰 Tổng tiền: ₫${totalPrice.toLocaleString()}
+📊 Trạng thái: ${status}
+📅 Thời gian: ${new Date().toLocaleString()}
+
+Cảm ơn bạn đã đặt hàng! 
+Chúng tôi sẽ xử lý đơn hàng sớm nhất có thể.`);
       
       // Clear cart after successful order
-      setCart({});
+      clearCart();
       setItemQuantities({});
       
-      // Optionally redirect to orders page
-      // navigate('/orders');
+      // Optional: Save order info to localStorage for tracking
+      const orderHistory = JSON.parse(localStorage.getItem('orderHistory') || '[]');
+      orderHistory.unshift({
+        id: orderId,
+        totalPrice: totalPrice,
+        status: status,
+        items: cartItems.length,
+        createdAt: new Date().toISOString()
+      });
+      localStorage.setItem('orderHistory', JSON.stringify(orderHistory.slice(0, 10))); // Keep last 10 orders
       
     } catch (error) {
-      console.error('Error creating order:', error);
-      if (error.response?.data?.message) {
-        alert('Lỗi: ' + error.response.data.message);
-      } else {
-        alert('Có lỗi xảy ra khi đặt hàng. Vui lòng thử lại.');
+      console.error('❌ Order creation failed:', error);
+      
+      let errorMessage = 'Có lỗi xảy ra khi đặt hàng. Vui lòng thử lại.';
+      
+      // Handle specific backend errors
+      if (error.message) {
+        if (error.message.includes('Not enough stock')) {
+          errorMessage = '❌ Một số sản phẩm đã hết hàng. Vui lòng kiểm tra lại giỏ hàng.';
+        } else if (error.message.includes('Cannot identify user')) {
+          errorMessage = '🔐 Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.';
+          // Optionally redirect to login
+          // navigate('/login');
+        } else if (error.message.includes('UserId is required')) {
+          errorMessage = '🔐 Lỗi xác thực người dùng. Vui lòng đăng nhập lại.';
+        } else {
+          errorMessage = error.message;
+        }
       }
+      
+      alert(`🚫 Đặt hàng thất bại!\n\n${errorMessage}`);
     } finally {
       setCheckoutLoading(false);
     }
@@ -301,78 +347,94 @@ const Menu = () => {
               </button>
             </div>
 
-            {/* Cart Summary */}
+            {/* Elegant Cart Summary */}
             {cartItemCount > 0 ? (
-              <div className="cart-summary">
-                <div className="cart-header">
-                  <h3 className="cart-title">
-                    <span className="cart-icon">🛒</span>
-                    Đơn hàng của bạn ({cartItemCount} món)
-                  </h3>
+              <div className="elegant-cart-summary">
+                <div className="cart-summary-header">
+                  <div className="cart-brand">
+                    <div className="cart-brand-icon">�️</div>
+                    <div className="cart-brand-text">
+                      <h3 className="cart-title">Đơn hàng của bạn</h3>
+                      <span className="cart-subtitle">{cartItemCount} món đã chọn</span>
+                    </div>
+                  </div>
                 </div>
                 
-                <div className="cart-items">
+                <div className="elegant-cart-items">
                   {cartItems.map((item) => (
-                    <div key={item.id} className="cart-item">
-                      <div className="cart-item-emoji">{item.image}</div>
-                      <div className="cart-item-info">
-                        <div className="cart-item-details">
-                          <p className="cart-item-name">{item.name}</p>
-                          <p className="cart-item-price">
-                            ₫{getItemPrice(item.price).toLocaleString()} x {item.quantity}
-                          </p>
-                          <p className="cart-item-subtotal">
-                            Tổng: ₫{(getItemPrice(item.price) * item.quantity).toLocaleString()}
-                          </p>
+                    <div key={item.id} className="elegant-cart-item">
+                      <div className="cart-item-image">
+                        <span className="item-emoji">{item.image}</span>
+                      </div>
+                      <div className="cart-item-content">
+                        <div className="cart-item-main">
+                          <h4 className="cart-item-name">{item.name}</h4>
+                          <div className="cart-item-price-info">
+                            <span className="unit-price">₫{getItemPrice(item.price).toLocaleString()}</span>
+                            <span className="quantity-indicator">x {item.quantity}</span>
+                          </div>
                         </div>
                         <div className="cart-item-controls">
-                          <div className="cart-qty-controls">
+                          <div className="quantity-controls">
                             <button 
-                              className="cart-qty-btn"
+                              className="qty-btn minus"
                               onClick={() => updateCartQuantity(item.id, item.quantity - 1)}
                             >
-                              -
+                              −
                             </button>
-                            <span className="cart-qty">{item.quantity}</span>
+                            <span className="quantity-display">{item.quantity}</span>
                             <button 
-                              className="cart-qty-btn"
+                              className="qty-btn plus"
                               onClick={() => updateCartQuantity(item.id, item.quantity + 1)}
                             >
                               +
                             </button>
                           </div>
                           <button 
-                            className="cart-remove-btn"
+                            className="remove-item-btn"
                             onClick={() => removeFromCart(item.id)}
                             title="Xóa khỏi giỏ hàng"
                           >
-                            ×
+                            🗑️
                           </button>
                         </div>
+                      </div>
+                      <div className="cart-item-total">
+                        <span className="item-total">₫{(getItemPrice(item.price) * item.quantity).toLocaleString()}</span>
                       </div>
                     </div>
                   ))}
                 </div>
                 
-                <div className="cart-total">
-                  <div className="total-line">
-                    <span className="total-label">Tổng cộng:</span>
-                    <span className="total-amount">₫{cartTotal.toLocaleString()}</span>
-                  </div>
-                  <div className="total-info">
-                    <small>{cartItemCount} món trong giỏ hàng</small>
+                <div className="cart-summary-total">
+                  <div className="total-calculation">
+                    <div className="subtotal-line">
+                      <span className="subtotal-label">Tạm tính</span>
+                      <span className="subtotal-amount">₫{cartTotal.toLocaleString()}</span>
+                    </div>
+                    <div className="total-line">
+                      <span className="total-label">Tổng cộng</span>
+                      <span className="total-amount">₫{cartTotal.toLocaleString()}</span>
+                    </div>
                   </div>
                 </div>
                 
                 <button 
-                  className="checkout-btn" 
+                  className="elegant-checkout-btn" 
                   onClick={handleCheckout}
                   disabled={checkoutLoading || cartItems.length === 0}
                 >
-                  <span className="btn-icon">
-                    {checkoutLoading ? '⏳' : '💳'}
-                  </span>
-                  {checkoutLoading ? 'Đang xử lý...' : 'Thanh toán'}
+                  <div className="checkout-btn-content">
+                    <span className="checkout-icon">
+                      {checkoutLoading ? '⏳' : '💳'}
+                    </span>
+                    <div className="checkout-text">
+                      <span className="checkout-label">
+                        {checkoutLoading ? 'Đang xử lý...' : 'Thanh toán'}
+                      </span>
+                      <span className="checkout-amount">₫{cartTotal.toLocaleString()}</span>
+                    </div>
+                  </div>
                 </button>
               </div>
             ) : (
@@ -428,7 +490,7 @@ const Menu = () => {
                       <div className="item-actions">
                         <button 
                           className="quantity-btn"
-                          onClick={() => updateQuantity(item.id, getItemQuantity(item.id) - 1)}
+                          onClick={() => updateItemQuantity(item.id, getItemQuantity(item.id) - 1)}
                           disabled={item.stock === 0}
                         >
                           -
@@ -436,14 +498,14 @@ const Menu = () => {
                         <span className="quantity">{getItemQuantity(item.id)}</span>
                         <button 
                           className="quantity-btn"
-                          onClick={() => updateQuantity(item.id, getItemQuantity(item.id) + 1)}
+                          onClick={() => updateItemQuantity(item.id, getItemQuantity(item.id) + 1)}
                           disabled={item.stock === 0 || getItemQuantity(item.id) >= item.stock}
                         >
                           +
                         </button>
                         <button 
                           className="add-to-cart"
-                          onClick={() => addToCart(item)}
+                          onClick={() => handleAddToCart(item)}
                         >
                           Thêm vào giỏ
                         </button>

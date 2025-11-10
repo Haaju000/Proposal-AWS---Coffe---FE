@@ -1,11 +1,45 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Header from '../components/Header';
 import { useAuth } from '../contexts/AuthContext';
+import orderService from '../services/orderService';
 import '../css/Orders.css';
 
 const Orders = () => {
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const [activeTab, setActiveTab] = useState('all');
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchOrders();
+    } else {
+      setLoading(false);
+    }
+  }, [isAuthenticated]);
+
+  const fetchOrders = async () => {
+    try {
+      setLoading(true);
+      
+      // Lấy order history từ localStorage trước (nhanh hơn)
+      const orderHistory = JSON.parse(localStorage.getItem('orderHistory') || '[]');
+      if (orderHistory.length > 0) {
+        setOrders(orderHistory);
+      }
+      
+      // TODO: Sau đó fetch từ API (khi có user orders endpoint)
+      // const apiOrders = await orderService.getUserOrders();
+      // setOrders(apiOrders);
+      
+      setLoading(false);
+    } catch (error) {
+      console.error('❌ Error fetching orders:', error);
+      setError('Không thể tải danh sách đơn hàng');
+      setLoading(false);
+    }
+  };
 
   // Mock order data
   const mockOrders = [
