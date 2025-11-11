@@ -23,6 +23,7 @@ import Contact from './pages/Contact';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import AdminDashboard from './pages/AdminDashboard';
+import ShipperDashboard from './pages/ShipperDashboard';
 import Profile from './pages/Profile';
 import Orders from './pages/Orders';
 import Loyalty from './pages/Loyalty';
@@ -66,6 +67,14 @@ function App() {
             element={
               <ProtectedRoute adminOnly={true}>
                 <AdminDashboard />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/shipper" 
+            element={
+              <ProtectedRoute shipperOnly={true}>
+                <ShipperDashboard />
               </ProtectedRoute>
             } 
           />

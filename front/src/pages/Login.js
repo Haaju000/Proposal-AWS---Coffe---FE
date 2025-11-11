@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { authService } from '../services/authService';
+import authService from '../services/authService';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import '../css/Auth.css';
@@ -44,23 +44,36 @@ const Login = () => {
         throw { message: 'Vui lòng nhập mật khẩu.' };
       }
 
-      // Call authService login
+      // Call login (handles both Local Auth and Cognito)
       const result = await authService.login(
         formData.username.trim(),
         formData.password
       );
 
       if (result.success) {
+        console.log('🔍 Login result:', result);
+        console.log('👤 User role:', result.user?.role);
+        console.log('🔐 Tokens:', result.tokens);
+        
         // Update auth context
         await login(result.user, result.tokens);
         
-        // Navigate based on user role
+        // Navigate based on user role with delay to ensure state update
         const userRole = result.user?.role;
-        if (userRole === 'Admin') {
-          navigate('/admin', { replace: true });
-        } else {
-          navigate('/', { replace: true });
-        }
+        console.log('🎯 Navigating based on role:', userRole);
+        
+        setTimeout(() => {
+          if (userRole === 'Admin') {
+            console.log('➡️ Redirecting to admin dashboard');
+            navigate('/admin', { replace: true });
+          } else if (userRole === 'Shipper') {
+            console.log('➡️ Redirecting to shipper dashboard');  
+            navigate('/shipper', { replace: true });
+          } else {
+            console.log('➡️ Redirecting to home');
+            navigate('/', { replace: true });
+          }
+        }, 300);
       }
     } catch (error) {
       console.error('Login error:', error);

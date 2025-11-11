@@ -14,9 +14,14 @@ const apiClient = axios.create({
 // Interceptor để thêm access token vào mỗi request
 apiClient.interceptors.request.use(
   (config) => {
+    // Check for both Cognito access_token and local_token
     const accessToken = localStorage.getItem('access_token');
+    const localToken = localStorage.getItem('local_token');
+    
     if (accessToken) {
       config.headers.Authorization = `Bearer ${accessToken}`;
+    } else if (localToken) {
+      config.headers.Authorization = `Bearer ${localToken}`;
     }
     return config;
   },
@@ -40,54 +45,81 @@ apiClient.interceptors.response.use(
 );
 
 // Auth service functions
-export const authService = {
-  // Login function - sử dụng query parameters như backend
+const authService = {
+  // Login function - gửi body JSON như Swagger API expect
   login: async (username, password) => {
     try {
-      // Gửi dưới dạng query parameters như backend expect
-      const response = await apiClient.post(`/Auth/login?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`);
+      // Gửi dưới dạng JSON body như Swagger API expect
+      const response = await apiClient.post('/Auth/login', {
+        username: username,
+        password: password
+      });
       
       console.log('Login response:', response.data);
+      console.log('🔍 Response authType:', response.data.authType);
+      console.log('🔍 Response keys:', Object.keys(response.data));
       
-      // Lưu các Cognito tokens
-      if (response.data.access_token) {
-        localStorage.setItem('access_token', response.data.access_token);
-        localStorage.setItem('id_token', response.data.id_token);
-        localStorage.setItem('refresh_token', response.data.refresh_token);
+      // Check authType to determine how to handle response
+      if (response.data.authType === 'Local') {
+        console.log('🔐 Processing Local Auth (Shipper)');
+        // Local Auth (Shipper) - direct token and user info
+        localStorage.setItem('local_token', response.data.token);
         
-        // Parse user info từ ID token (JWT payload)
-        const userInfo = parseJWTPayload(response.data.id_token);
         const userData = { 
-          username: username, // Username from form
-          userId: userInfo.sub, // Cognito User ID (UserSub)
-          cognitoUsername: userInfo['cognito:username'] || username, // Cognito username
-          email: userInfo.email || '',
-          role: userInfo['custom:role'] || 'User', // Role từ Cognito custom attribute
-          phone: userInfo.phone_number || '',
-          emailVerified: userInfo.email_verified || false,
-          rewardPoints: 0, // Sẽ được load từ DynamoDB
-          voucherCount: 0, // Sẽ được load từ DynamoDB
-          iat: userInfo.iat,
-          exp: userInfo.exp
+          username: response.data.username,
+          userId: response.data.userId,
+          email: response.data.username, // Username is email for shipper
+          role: response.data.role, // "Shipper"
+          authType: response.data.authType, // "Local"
+          rewardPoints: 0,
+          voucherCount: 0
         };
         localStorage.setItem('user', JSON.stringify(userData));
+      } else {
+        console.log('🔐 Processing Cognito Auth (User/Admin)');
+        // Cognito Auth (User/Admin) - Lưu các Cognito tokens
+        if (response.data.accessToken) {
+          localStorage.setItem('access_token', response.data.accessToken);
+          localStorage.setItem('id_token', response.data.idToken);
+          localStorage.setItem('refresh_token', response.data.refreshToken);
+          
+          // Parse user info từ ID token (JWT payload)
+          const userInfo = parseJWTPayload(response.data.idToken);
+          const userData = { 
+            username: username, // Username from form
+            userId: userInfo.sub, // Cognito User ID (UserSub)
+            cognitoUsername: userInfo['cognito:username'] || username, // Cognito username
+            email: userInfo.email || '',
+            role: userInfo['custom:role'] || 'User', // Role từ Cognito custom attribute
+            phone: userInfo.phone_number || '',
+            emailVerified: userInfo.email_verified || false,
+            authType: 'Cognito',
+            rewardPoints: 0, // Sẽ được load từ DynamoDB
+            voucherCount: 0, // Sẽ được load từ DynamoDB
+            iat: userInfo.iat,
+            exp: userInfo.exp
+          };
+          localStorage.setItem('user', JSON.stringify(userData));
 
-        // Fetch thêm thông tin user từ DynamoDB (nếu cần)
-        try {
-          await authService.loadUserProfile(userData.userId);
-        } catch (profileError) {
-          console.warn('Could not load user profile from DynamoDB:', profileError);
+          // Fetch thêm thông tin user từ DynamoDB (nếu cần)
+          try {
+            await authService.loadUserProfile(userData.userId);
+          } catch (profileError) {
+            console.warn('Could not load user profile from DynamoDB:', profileError);
+          }
         }
       }
       
       return {
         success: true,
-        message: 'Đăng nhập thành công!',
+        message: response.data.message || 'Đăng nhập thành công!',
         user: JSON.parse(localStorage.getItem('user')),
-        tokens: {
-          access_token: response.data.access_token,
-          id_token: response.data.id_token,
-          refresh_token: response.data.refresh_token
+        tokens: response.data.authType === 'Local' ? {
+          local_token: response.data.token
+        } : {
+          access_token: response.data.accessToken,
+          id_token: response.data.idToken,
+          refresh_token: response.data.refreshToken
         }
       };
     } catch (error) {
@@ -264,6 +296,7 @@ export const authService = {
       localStorage.removeItem('access_token');
       localStorage.removeItem('id_token');
       localStorage.removeItem('refresh_token');
+      localStorage.removeItem('local_token');
       localStorage.removeItem('user');
     }
   },
@@ -272,13 +305,21 @@ export const authService = {
   getCurrentUser: () => {
     try {
       const user = localStorage.getItem('user');
-      const accessToken = localStorage.getItem('access_token');
-      
-      if (!user || !accessToken) return null;
+      if (!user) return null;
       
       const userData = JSON.parse(user);
       
-      // Kiểm tra token expiry
+      // For shipper: different validation
+      if (userData.role === 'Shipper') {
+        const localToken = localStorage.getItem('local_token');
+        return localToken ? userData : null;
+      }
+      
+      // For regular users: need access_token and check expiry
+      const accessToken = localStorage.getItem('access_token');
+      if (!accessToken) return null;
+      
+      // Kiểm tra token expiry (only for Cognito tokens)
       if (userData.exp && Date.now() >= userData.exp * 1000) {
         console.warn('Token expired');
         authService.logout();
@@ -294,8 +335,16 @@ export const authService = {
 
   // Check if user is authenticated
   isAuthenticated: () => {
-    const accessToken = localStorage.getItem('access_token');
     const user = authService.getCurrentUser();
+    const accessToken = localStorage.getItem('access_token');
+    const localToken = localStorage.getItem('local_token');
+    
+    // For shipper: only need local_token and user with Shipper role
+    if (user?.role === 'Shipper') {
+      return !!(localToken && user);
+    }
+    
+    // For regular users (User/Admin): need Cognito access_token
     return !!(accessToken && user);
   },
 
@@ -303,6 +352,12 @@ export const authService = {
   isAdmin: () => {
     const user = authService.getCurrentUser();
     return user?.role === 'Admin';
+  },
+
+  // Check if user is shipper
+  isShipper: () => {
+    const user = authService.getCurrentUser();
+    return user?.role === 'Shipper';
   },
 
   // Get access token
