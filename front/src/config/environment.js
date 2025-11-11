@@ -4,12 +4,12 @@ export const ENV_CONFIG = {
   API: {
     LOCAL: {
       USE_AMPLIFY_AUTH: false,
-      API_BASE_URL: 'http://localhost:5000/api',
+      API_BASE_URL: 'http://localhost:5144/api',
       AUTH_TYPE: 'custom'
     },
     PRODUCTION: {
       USE_AMPLIFY_AUTH: true,
-      API_BASE_URL: 'http://localhost:5000/api', // Fallback to localhost for now
+      API_BASE_URL: 'https://main.d3djm3hylbiyyu.amplifyapp.com/', // Fallback to localhost for now
       AUTH_TYPE: 'amplify'
     }
   },
