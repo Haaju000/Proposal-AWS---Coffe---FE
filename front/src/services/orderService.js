@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // API base URL - match với Swagger backend
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = 'http://localhost:5144/api';
 
 // Create axios instance
 const apiClient = axios.create({

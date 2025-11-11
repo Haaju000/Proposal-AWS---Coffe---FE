@@ -1,12 +1,12 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:5000'; // Khớp với Swagger backend
+const API_BASE_URL = 'http://localhost:5144'; // Khớp với Swagger backend
 
 const cakeService = {
-  // GET /api/cake - Lấy tất cả bánh
+  // GET /api/Cake - Lấy tất cả bánh
   getAllCakes: async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/cake`);
+      const response = await axios.get(`${API_BASE_URL}/api/Cake`);
       return response.data;
     } catch (error) {
       console.error('Error fetching cakes:', error);
@@ -14,10 +14,10 @@ const cakeService = {
     }
   },
 
-  // GET /api/cake/{id} - Lấy bánh theo ID
+  // GET /api/Cake/{id} - Lấy bánh theo ID
   getCakeById: async (id) => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/cake/${id}`);
+      const response = await axios.get(`${API_BASE_URL}/api/Cake/${id}`);
       return response.data;
     } catch (error) {
       console.error('Error fetching cake by id:', error);
@@ -25,68 +25,70 @@ const cakeService = {
     }
   },
 
-  // POST /api/cake - Tạo bánh mới (admin only)
+  // POST /api/Cake - Tạo bánh mới (admin only)
   createCake: async (cakeData, token) => {
     try {
-      // Ensure all required fields are present (theo backend Cake model)
+      // Ensure all required fields are present (theo backend Cake model từ Swagger)
       const payload = {
         name: cakeData.name,
-        price: cakeData.price,
-        stock: cakeData.stock || 0,
-        imageUrl: cakeData.imageUrl || null
+        price: parseInt(cakeData.price) || 0,
+        stock: parseInt(cakeData.stock) || 0,
+        imageUrl: cakeData.imageUrl || ""
       };
       
       console.log('🍰 Creating cake with payload:', payload);
       
-      const response = await axios.post(`${API_BASE_URL}/api/cake`, payload, {
+      const response = await axios.post(`${API_BASE_URL}/api/Cake`, payload, {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${token}`, // Thêm Bearer prefix cho JWT token
           'Content-Type': 'application/json'
         }
       });
       return response.data;
     } catch (error) {
-      console.error('Error creating cake:', error);
+      console.error('❌ Error creating cake:', error.response?.data || error.message);
       throw error;
     }
   },
 
-  // PUT /api/cake/{id} - Cập nhật bánh (admin only)
+  // PUT /api/Cake/{id} - Cập nhật bánh (admin only)
   updateCake: async (id, cakeData, token) => {
     try {
       const payload = {
+        id: id, // Bao gồm ID trong payload
         name: cakeData.name,
-        price: cakeData.price,
-        stock: cakeData.stock || 0,
-        imageUrl: cakeData.imageUrl || null
+        price: parseInt(cakeData.price) || 0,
+        stock: parseInt(cakeData.stock) || 0,
+        imageUrl: cakeData.imageUrl || ""
       };
       
       console.log('🍰 Updating cake with payload:', payload);
       
-      const response = await axios.put(`${API_BASE_URL}/api/cake/${id}`, payload, {
+      const response = await axios.put(`${API_BASE_URL}/api/Cake/${id}`, payload, {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${token}`, // Thêm Bearer prefix cho JWT token
           'Content-Type': 'application/json'
         }
       });
       return response.data;
     } catch (error) {
-      console.error('Error updating cake:', error);
+      console.error('❌ Error updating cake:', error.response?.data || error.message);
       throw error;
     }
   },
 
-  // DELETE /api/cake/{id} - Xóa bánh (admin only)
+  // DELETE /api/Cake/{id} - Xóa bánh (admin only)
   deleteCake: async (id, token) => {
     try {
-      const response = await axios.delete(`${API_BASE_URL}/api/cake/${id}`, {
+      console.log('🗑️ Deleting cake with id:', id);
+      const response = await axios.delete(`${API_BASE_URL}/api/Cake/${id}`, {
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}` // Thêm Bearer prefix cho JWT token
         }
       });
       return response.data;
     } catch (error) {
-      console.error('Error deleting cake:', error);
+      console.error('❌ Error deleting cake:', error.response?.data || error.message);
       throw error;
     }
   },

@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import cakeService from '../services/cakeService';
 import drinkService from '../services/drinkService';
+import toppingService from '../services/toppingService';
 import orderService from '../services/orderService';
 import '../css/AdminDashboard-new.css';
 
@@ -23,20 +24,84 @@ import {
   FiCoffee,
   FiBox, // Icon cho bánh
   FiEye,
-  FiGlobe
+  FiGlobe,
+  FiStar // Icon cho topping
 } from 'react-icons/fi';
 
-// Material Design Icons cho bánh
+// Material Design Icons cho bánh và topping
 import { MdCake } from 'react-icons/md';
 
 const AdminDashboard = () => {
   const [activeSection, setActiveSection] = useState('overview');
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  
+  // Notification system state
+  const [notifications, setNotifications] = useState([]);
+  
+  // Confirmation modal state
+  const [confirmModal, setConfirmModal] = useState(null);
+
+  // Notification system functions
+  const showNotification = (title, message, type = 'info', duration = 4000) => {
+    const id = Date.now() + Math.random();
+    const notification = { id, title, message, type };
+    
+    setNotifications(prev => [...prev, notification]);
+    
+    // Auto remove after duration
+    setTimeout(() => {
+      removeNotification(id);
+    }, duration);
+  };
+
+  const removeNotification = (id) => {
+    setNotifications(prev => 
+      prev.map(notif => 
+        notif.id === id 
+          ? { ...notif, removing: true }
+          : notif
+      )
+    );
+    
+    // Remove from state after animation
+    setTimeout(() => {
+      setNotifications(prev => prev.filter(notif => notif.id !== id));
+    }, 300);
+  };
+
+  // Confirmation modal functions
+  const showConfirmModal = (title, message, onConfirm) => {
+    setConfirmModal({ title, message, onConfirm });
+  };
+
+  const hideConfirmModal = () => {
+    setConfirmModal(null);
+  };
+
+  // Handle ESC key to close modal
+  useEffect(() => {
+    const handleEscKey = (event) => {
+      if (event.key === 'Escape' && confirmModal) {
+        hideConfirmModal();
+      }
+    };
+
+    if (confirmModal) {
+      document.addEventListener('keydown', handleEscKey);
+      // Prevent body scroll when modal is open
+      document.body.style.overflow = 'hidden';
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscKey);
+      document.body.style.overflow = 'unset';
+    };
+  }, [confirmModal]);
 
   const handleLogout = () => {
     logout();
-    navigate('/');
+    navigate('/login');
   };
 
   const menuItems = [
@@ -77,9 +142,9 @@ const AdminDashboard = () => {
       case 'overview':
         return <OverviewContent />;
       case 'products':
-        return <ProductsContent />;
+        return <ProductsContent showNotification={showNotification} showConfirmModal={showConfirmModal} />;
       case 'orders':
-        return <OrdersContent />;
+        return <OrdersContent showNotification={showNotification} />;
       case 'customers':
         return <CustomersContent />;
       case 'promotions':
@@ -142,6 +207,66 @@ const AdminDashboard = () => {
           {renderContent()}
         </div>
       </main>
+      
+      {/* Notification System */}
+      <div className="notification-container">
+        {notifications.map(notification => (
+          <div
+            key={notification.id}
+            className={`notification ${notification.type} ${notification.removing ? 'removing' : ''}`}
+          >
+            <div className="notification-icon">
+              {notification.type === 'success' && '✓'}
+              {notification.type === 'error' && '✕'}
+              {notification.type === 'warning' && '⚠'}
+              {notification.type === 'info' && 'i'}
+            </div>
+            <div className="notification-content">
+              <div className="notification-title">{notification.title}</div>
+              <div className="notification-message">{notification.message}</div>
+            </div>
+            <button
+              className="notification-close"
+              onClick={() => removeNotification(notification.id)}
+            >
+              ×
+            </button>
+            <div className="notification-progress">
+              <div className="notification-progress-bar"></div>
+            </div>
+          </div>
+        ))}
+      </div>
+      
+      {/* Confirmation Modal */}
+      {confirmModal && (
+        <div className="confirm-modal-overlay" onClick={hideConfirmModal}>
+          <div className="confirm-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="confirm-modal-header">
+              <div className="confirm-modal-icon">⚠</div>
+              <h3 className="confirm-modal-title">{confirmModal.title}</h3>
+            </div>
+            <p className="confirm-modal-message">{confirmModal.message}</p>
+            <div className="confirm-modal-actions">
+              <button 
+                className="confirm-btn confirm-btn-cancel"
+                onClick={hideConfirmModal}
+              >
+                Hủy bỏ
+              </button>
+              <button 
+                className="confirm-btn confirm-btn-delete"
+                onClick={() => {
+                  confirmModal.onConfirm();
+                  hideConfirmModal();
+                }}
+              >
+                Xác nhận
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -213,7 +338,7 @@ const OverviewContent = () => (
   </div>
 );
 
-const ProductsContent = () => {
+const ProductsContent = ({ showNotification, showConfirmModal }) => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -228,14 +353,16 @@ const ProductsContent = () => {
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const [drinksResponse, cakesResponse] = await Promise.all([
+      const [drinksResponse, cakesResponse, toppingsResponse] = await Promise.all([
         drinkService.getAllDrinks(),
-        cakeService.getAllCakes()
+        cakeService.getAllCakes(),
+        toppingService.getAllToppings()
       ]);
       
       const allProducts = [
         ...drinksResponse.map(item => ({ ...item, type: 'drink' })),
-        ...cakesResponse.map(item => ({ ...item, type: 'cake' }))
+        ...cakesResponse.map(item => ({ ...item, type: 'cake' })),
+        ...toppingsResponse.map(item => ({ ...item, type: 'topping' }))
       ];
       
       // Debug log để kiểm tra imageUrl
@@ -257,30 +384,41 @@ const ProductsContent = () => {
     }
   };
 
-  const handleDeleteProduct = async (productId, productType) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa sản phẩm này?')) {
-      return;
-    }
-
-    try {
-      const token = localStorage.getItem('token');
-      if (productType === 'drink') {
-        await drinkService.deleteDrink(productId, token);
-      } else {
-        await cakeService.deleteCake(productId, token);
+  const handleDeleteProduct = (productId, productType) => {
+    // Find product name for better UX
+    const product = products.find(p => p.id === productId && p.type === productType);
+    const productName = product ? product.name : 'sản phẩm này';
+    
+    showConfirmModal(
+      'Xác nhận xóa sản phẩm',
+      `Bạn có chắc chắn muốn xóa "${productName}"? Hành động này không thể hoàn tác.`,
+      async () => {
+        try {
+          const token = localStorage.getItem('id_token');
+          if (productType === 'drink') {
+            await drinkService.deleteDrink(productId, token);
+          } else if (productType === 'cake') {
+            await cakeService.deleteCake(productId, token);
+          } else if (productType === 'topping') {
+            await toppingService.deleteTopping(productId, token);
+          }
+          
+          showNotification('Thành công!', 'Sản phẩm đã được xóa khỏi hệ thống', 'success');
+          fetchProducts(); // Refresh the list
+        } catch (error) {
+          console.error('Error deleting product:', error);
+          showNotification('Lỗi!', 'Không thể xóa sản phẩm. Vui lòng thử lại sau', 'error');
+        }
       }
-      
-      alert('Xóa sản phẩm thành công!');
-      fetchProducts(); // Refresh the list
-    } catch (error) {
-      console.error('Error deleting product:', error);
-      alert('Có lỗi khi xóa sản phẩm');
-    }
+    );
   };
 
-  const filteredProducts = products.filter(product => 
-    activeTab === 'drinks' ? product.type === 'drink' : product.type === 'cake'
-  );
+  const filteredProducts = products.filter(product => {
+    if (activeTab === 'drinks') return product.type === 'drink';
+    if (activeTab === 'cakes') return product.type === 'cake';
+    if (activeTab === 'toppings') return product.type === 'topping';
+    return false;
+  });
 
   if (loading) {
     return <div className="loading">Đang tải sản phẩm...</div>;
@@ -319,6 +457,13 @@ const ProductsContent = () => {
           <MdCake size={18} />
           <span>Bánh ({products.filter(p => p.type === 'cake').length})</span>
         </button>
+        <button 
+          className={`tab ${activeTab === 'toppings' ? 'active' : ''}`}
+          onClick={() => setActiveTab('toppings')}
+        >
+          <FiStar size={18} />
+          <span>Topping ({products.filter(p => p.type === 'topping').length})</span>
+        </button>
       </div>
 
       {/* Products Grid */}
@@ -334,12 +479,12 @@ const ProductsContent = () => {
                   onError={(e) => {
                     console.error(`❌ Image failed: ${product.name} - ${product.imageUrl}`);
                     e.target.style.display = 'none';
-                    e.target.parentNode.innerHTML = `<div class="no-image">${product.type === 'drink' ? '☕' : '🧁'} Image Error</div>`;
+                    e.target.parentNode.innerHTML = `<div class="no-image">Image not available</div>`;
                   }}
                 />
               ) : (
                 <div className="no-image">
-                  {product.type === 'drink' ? '☕' : '🧁'} No Image
+                  No Image
                 </div>
               )}
             </div>
@@ -349,11 +494,11 @@ const ProductsContent = () => {
               <div className="product-details">
                 <p className="product-type">
                   <span className={`type-badge type-badge-${product.type}`}>
-                    {product.type === 'drink' ? '🥤 Đồ uống' : '🧁 Bánh'}
+                    {product.type === 'drink' ? 'Đồ uống' : product.type === 'cake' ? 'Bánh' : 'Topping'}
                   </span>
                 </p>
                 
-                {/* Price display - khác nhau cho drink và cake */}
+                {/* Price display - khác nhau cho từng loại */}
                 {product.type === 'drink' ? (
                   <p className="price">
                     <strong>Giá cơ bản: {product.basePrice?.toLocaleString('vi-VN') || '0'} VNĐ</strong>
@@ -371,7 +516,7 @@ const ProductsContent = () => {
                 {/* Category chỉ hiển thị cho drinks */}
                 {product.type === 'drink' && product.category && (
                   <p className="category">
-                    <span className="category-badge">📂 {product.category}</span>
+                    <span className="category-badge">{product.category}</span>
                   </p>
                 )}
               </div>
@@ -404,6 +549,7 @@ const ProductsContent = () => {
         <ProductFormModal
           product={editingProduct}
           isEditing={!!editingProduct}
+          showNotification={showNotification}
           onClose={() => {
             setShowAddForm(false);
             setEditingProduct(null);
@@ -420,7 +566,7 @@ const ProductsContent = () => {
 };
 
 // Product Form Modal Component
-const ProductFormModal = ({ product, isEditing, onClose, onSuccess }) => {
+const ProductFormModal = ({ product, isEditing, onClose, onSuccess, showNotification }) => {
   const [formData, setFormData] = useState({
     name: product?.name || '',
     price: product?.price || product?.basePrice || '',
@@ -428,7 +574,7 @@ const ProductFormModal = ({ product, isEditing, onClose, onSuccess }) => {
     type: product?.type || 'drink',
     // For drinks only
     basePrice: product?.basePrice || '',
-    category: product?.category || 'Default',
+    category: product?.category || 'Coffee',
     // Common optional field
     imageUrl: product?.imageUrl || ''
   });
@@ -502,7 +648,20 @@ const ProductFormModal = ({ product, isEditing, onClose, onSuccess }) => {
     setLoading(true);
 
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('id_token'); // Sử dụng id_token từ Cognito
+      console.log('🔑 Token being used:', token ? 'Token exists' : 'No token found');
+      console.log('🔑 Token length:', token ? token.length : 0);
+      
+      // Debug: In tất cả keys trong localStorage
+      console.log('📱 All localStorage keys:', Object.keys(localStorage));
+      console.log('📱 Access token exists:', !!localStorage.getItem('access_token'));
+      console.log('📱 ID token exists:', !!localStorage.getItem('id_token'));
+      
+      if (!token) {
+        showNotification('Lỗi xác thực!', 'Bạn cần đăng nhập để thực hiện hành động này', 'error');
+        return;
+      }
+
       let productData;
 
       if (formData.type === 'drink') {
@@ -510,15 +669,22 @@ const ProductFormModal = ({ product, isEditing, onClose, onSuccess }) => {
           name: formData.name.trim(),
           basePrice: parseFloat(formData.basePrice),
           stock: parseInt(formData.stock),
-          category: formData.category.trim() || 'Default',
-          imageUrl: formData.imageUrl.trim() || null
+          category: formData.category.trim() || 'Coffee',
+          imageUrl: formData.imageUrl.trim() || ""
         };
-      } else {
+      } else if (formData.type === 'cake') {
         productData = {
           name: formData.name.trim(), 
           price: parseFloat(formData.price),
           stock: parseInt(formData.stock),
-          imageUrl: formData.imageUrl.trim() || null
+          imageUrl: formData.imageUrl.trim() || ""
+        };
+      } else if (formData.type === 'topping') {
+        productData = {
+          name: formData.name.trim(), 
+          price: parseFloat(formData.price),
+          stock: parseInt(formData.stock),
+          imageUrl: formData.imageUrl.trim() || ""
         };
       }
 
@@ -531,30 +697,36 @@ const ProductFormModal = ({ product, isEditing, onClose, onSuccess }) => {
         if (formData.type === 'drink') {
           const response = await drinkService.updateDrink(product.id, productData, token);
           console.log('✅ Update drink response:', response);
-        } else {
+        } else if (formData.type === 'cake') {
           const response = await cakeService.updateCake(product.id, productData, token);
           console.log('✅ Update cake response:', response);
+        } else if (formData.type === 'topping') {
+          const response = await toppingService.updateTopping(product.id, productData, token);
+          console.log('✅ Update topping response:', response);
         }
-        alert('Cập nhật sản phẩm thành công!');
+        showNotification('Thành công!', 'Sản phẩm đã được cập nhật', 'success');
       } else {
         // Create new product
         if (formData.type === 'drink') {
           const response = await drinkService.createDrink(productData, token);
           console.log('✅ Create drink response:', response);
-        } else {
+        } else if (formData.type === 'cake') {
           const response = await cakeService.createCake(productData, token);
           console.log('✅ Create cake response:', response);
+        } else if (formData.type === 'topping') {
+          const response = await toppingService.createTopping(productData, token);
+          console.log('✅ Create topping response:', response);
         }
-        alert('Thêm sản phẩm thành công!');
+        showNotification('Thành công!', 'Sản phẩm mới đã được thêm vào hệ thống', 'success');
       }
 
       onSuccess();
     } catch (error) {
       console.error('Error saving product:', error);
       if (error.response?.data?.message) {
-        alert('Lỗi: ' + error.response.data.message);
+        showNotification('Lỗi!', error.response.data.message, 'error');
       } else {
-        alert('Có lỗi khi lưu sản phẩm');
+        showNotification('Lỗi!', 'Có lỗi khi lưu sản phẩm. Vui lòng thử lại sau', 'error');
       }
     } finally {
       setLoading(false);
@@ -582,6 +754,7 @@ const ProductFormModal = ({ product, isEditing, onClose, onSuccess }) => {
             >
               <option value="drink">Đồ uống</option>
               <option value="cake">Bánh</option>
+              <option value="topping">Topping</option>
             </select>
             {errors.type && <span className="error-message">{errors.type}</span>}
           </div>
@@ -699,7 +872,7 @@ const ProductFormModal = ({ product, isEditing, onClose, onSuccess }) => {
   );
 };
 
-const OrdersContent = () => {
+const OrdersContent = ({ showNotification }) => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -729,11 +902,11 @@ const OrdersContent = () => {
     try {
       const token = localStorage.getItem('token');
       await orderService.updateOrderStatus(orderId, newStatus, token);
-      alert('Cập nhật trạng thái đơn hàng thành công!');
+      showNotification('Thành công!', 'Trạng thái đơn hàng đã được cập nhật', 'success');
       fetchOrders(); // Refresh the list
     } catch (error) {
       console.error('Error updating order status:', error);
-      alert('Có lỗi khi cập nhật trạng thái đơn hàng');
+      showNotification('Lỗi!', 'Không thể cập nhật trạng thái đơn hàng', 'error');
     }
   };
 
