@@ -9,7 +9,7 @@ export const ENV_CONFIG = {
     },
     PRODUCTION: {
       USE_AMPLIFY_AUTH: true,
-      API_BASE_URL: 'https://main.d3djm3hylbiyyu.amplifyapp.com/', // Fallback to localhost for now
+      API_BASE_URL: '', // Fallback to localhost for now
       AUTH_TYPE: 'amplify'
     }
   },
