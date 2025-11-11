@@ -143,8 +143,32 @@ export function CartProvider({ children }) {
 
   const getTotalPrice = () => {
     return state.items.reduce((total, item) => {
-      return total + (getItemPrice(item.price) * item.quantity);
+      let itemPrice = getItemPrice(item.price);
+      
+      // Add topping prices if any
+      if (item.selectedToppings && item.selectedToppings.length > 0) {
+        const toppingsPrice = item.selectedToppings.reduce((toppingTotal, topping) => {
+          return toppingTotal + getItemPrice(topping.price);
+        }, 0);
+        itemPrice += toppingsPrice;
+      }
+      
+      return total + (itemPrice * item.quantity);
     }, 0);
+  };
+
+  const getItemTotalPrice = (item) => {
+    let basePrice = getItemPrice(item.price);
+    
+    // Add topping prices if any
+    if (item.selectedToppings && item.selectedToppings.length > 0) {
+      const toppingsPrice = item.selectedToppings.reduce((toppingTotal, topping) => {
+        return toppingTotal + getItemPrice(topping.price);
+      }, 0);
+      basePrice += toppingsPrice;
+    }
+    
+    return basePrice * item.quantity;
   };
 
   const getItemInCart = (itemId) => {
@@ -173,7 +197,8 @@ export function CartProvider({ children }) {
     getItemInCart,
     isItemInCart,
     getTotalItems,
-    getTotalPrice
+    getTotalPrice,
+    getItemTotalPrice
   };
 
   return (

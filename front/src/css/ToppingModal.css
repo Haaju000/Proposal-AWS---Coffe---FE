@@ -1,0 +1,341 @@
+/* Topping Modal Styles */
+.topping-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(8px);
+}
+
+.topping-modal {
+  background: white;
+  border-radius: 20px;
+  width: 600px;
+  max-width: 95vw;
+  max-height: 90vh;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+  animation: modalSlideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  display: flex;
+  flex-direction: column;
+}
+
+@keyframes modalSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Topping Header */
+.topping-header {
+  background: linear-gradient(135deg, #8B4513 0%, #6F4E37 50%, #5D2A0A 100%);
+  color: white;
+  padding: 24px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.drink-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.drink-image {
+  width: 56px;
+  height: 56px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.drink-image img {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  object-fit: cover;
+}
+
+.drink-image .emoji {
+  font-size: 1.75rem;
+}
+
+.drink-details h2 {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.drink-details p {
+  margin: 4px 0 0 0;
+  font-size: 0.9rem;
+  opacity: 0.9;
+}
+
+.topping-header .close-btn {
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1.25rem;
+  transition: all 0.3s ease;
+}
+
+.topping-header .close-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: scale(1.05);
+}
+
+/* Toppings Content */
+.toppings-content {
+  flex: 1;
+  padding: 32px;
+  overflow-y: auto;
+}
+
+.toppings-content h3 {
+  margin: 0 0 20px 0;
+  color: #1E293B;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.toppings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.topping-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background: #F8FAFC;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.topping-item .topping-image {
+  width: 48px;
+  height: 48px;
+  background: white;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.topping-item .topping-image img {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.topping-item .topping-image .emoji {
+  font-size: 1.5rem;
+}
+
+.topping-info {
+  flex: 1;
+}
+
+.topping-info h4 {
+  margin: 0;
+  color: #1E293B;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.topping-price {
+  margin: 4px 0 0 0;
+  color: #8B4513;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.topping-checkbox {
+  font-size: 1.25rem;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  border-radius: 8px;
+}
+
+/* Topping Summary */
+.topping-summary {
+  padding: 24px 32px;
+  background: #F8FAFC;
+  border-top: 1px solid #E2E8F0;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  color: #64748B;
+  font-size: 0.95rem;
+}
+
+.summary-row.topping-row {
+  font-size: 0.875rem;
+  padding-left: 16px;
+  color: #8B4513;
+}
+
+.summary-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 0 0 0;
+  margin-top: 12px;
+  border-top: 2px solid #8B4513;
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: #8B4513;
+}
+
+/* Action Buttons */
+.topping-actions {
+  padding: 24px 32px;
+  background: white;
+  display: flex;
+  gap: 16px;
+  justify-content: flex-end;
+  border-top: 1px solid #E2E8F0;
+}
+
+.topping-actions .btn {
+  padding: 14px 28px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 1rem;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.topping-actions .btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.topping-actions .btn-secondary {
+  background: white;
+  color: #64748B;
+  border: 2px solid #E2E8F0;
+}
+
+.topping-actions .btn-secondary:hover:not(:disabled) {
+  background: #F8FAFC;
+  border-color: #CBD5E1;
+  transform: translateY(-1px);
+}
+
+.topping-actions .btn-primary {
+  background: linear-gradient(135deg, #8B4513 0%, #6F4E37 50%, #5D2A0A 100%);
+  color: white;
+  box-shadow: 0 4px 15px rgba(139, 69, 19, 0.3);
+  min-width: 200px;
+}
+
+.topping-actions .btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(139, 69, 19, 0.4);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .topping-modal {
+    width: 95vw;
+    height: 95vh;
+    border-radius: 20px 20px 0 0;
+  }
+  
+  .topping-header,
+  .toppings-content,
+  .topping-summary,
+  .topping-actions {
+    padding: 16px 20px;
+  }
+  
+  .toppings-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
+  .topping-item {
+    padding: 12px;
+    gap: 12px;
+  }
+  
+  .topping-item .topping-image {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .topping-item .topping-image img {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .drink-info {
+    gap: 12px;
+  }
+  
+  .drink-image {
+    width: 48px;
+    height: 48px;
+  }
+  
+  .drink-image img {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .drink-details h2 {
+    font-size: 1.2rem;
+  }
+  
+  .topping-actions {
+    flex-direction: column-reverse;
+  }
+  
+  .topping-actions .btn {
+    width: 100%;
+    min-width: auto;
+  }
+}

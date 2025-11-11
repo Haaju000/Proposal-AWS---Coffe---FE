@@ -5,6 +5,7 @@ import cakeService from '../services/cakeService';
 import drinkService from '../services/drinkService';
 import toppingService from '../services/toppingService';
 import orderService from '../services/orderService';
+import customerService from '../services/customerService';
 import '../css/AdminDashboard-new.css';
 
 // React Icons
@@ -146,7 +147,7 @@ const AdminDashboard = () => {
       case 'orders':
         return <OrdersContent showNotification={showNotification} />;
       case 'customers':
-        return <CustomersContent />;
+        return <CustomersContent showNotification={showNotification} showConfirmModal={showConfirmModal} />;
       case 'promotions':
         return <PromotionsContent />;
       default:
@@ -1040,43 +1041,269 @@ const OrdersContent = ({ showNotification }) => {
   );
 };
 
-const CustomersContent = () => (
-  <div className="customers-content">
-    <div className="content-header">
-      <h2>Quản lý tài khoản</h2>
-      <div className="user-tabs">
-        <button className="tab active">Khách hàng</button>
-        <button className="tab">Shipper</button>
+const CustomersContent = ({ showNotification, showConfirmModal }) => {
+  const [customers, setCustomers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [viewModalOpen, setViewModalOpen] = useState(false);
+
+  useEffect(() => {
+    loadCustomers();
+  }, []);
+
+  const loadCustomers = async (showSuccessNotification = false) => {
+    try {
+      setLoading(true);
+      const data = await customerService.getAllCustomers();
+      setCustomers(data);
+      if (showSuccessNotification) {
+        showNotification('Thành công', 'Tải danh sách khách hàng thành công', 'success');
+      }
+    } catch (error) {
+      showNotification('Lỗi', 'Không thể tải danh sách khách hàng', 'error');
+      console.error('Error loading customers:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleViewCustomer = (customer) => {
+    console.log('🔍 Viewing customer:', customer);
+    // Sử dụng data đã có thay vì gọi API mới
+    setSelectedCustomer(customer);
+    setViewModalOpen(true);
+    console.log('Modal state updated:', { viewModalOpen: true, customer });
+  };
+
+  const handleDeleteCustomer = (customer) => {
+    showConfirmModal(
+      'Xóa tài khoản khách hàng',
+      `Bạn có chắc chắn muốn xóa tài khoản "${customer.username || customer.email}"? Hành động này không thể hoàn tác.`,
+      async () => {
+        try {
+          await customerService.deleteCustomer(customer.userId);
+          showNotification('Thành công', 'Xóa tài khoản khách hàng thành công', 'success');
+          loadCustomers(false); // Refresh list without duplicate notification
+        } catch (error) {
+          showNotification('Lỗi', 'Không thể xóa tài khoản khách hàng', 'error');
+        }
+      }
+    );
+  };
+
+  const handleToggleCustomerStatus = async (customer) => {
+    const newStatus = !customer.isActive;
+    const actionText = newStatus ? 'kích hoạt' : 'vô hiệu hóa';
+    
+    showConfirmModal(
+      `${newStatus ? 'Kích hoạt' : 'Vô hiệu hóa'} tài khoản`,
+      `Bạn có chắc chắn muốn ${actionText} tài khoản "${customer.username || customer.email}"?`,
+      async () => {
+        try {
+          await customerService.updateCustomerStatus(customer.userId, newStatus ? 'active' : 'inactive');
+          showNotification('Thành công', `${actionText.charAt(0).toUpperCase() + actionText.slice(1)} tài khoản thành công`, 'success');
+          loadCustomers(false); // Refresh list without duplicate notification
+        } catch (error) {
+          showNotification('Lỗi', `Không thể ${actionText} tài khoản`, 'error');
+        }
+      }
+    );
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    try {
+      return new Date(dateString).toLocaleDateString('vi-VN');
+    } catch (error) {
+      return 'N/A';
+    }
+  };
+
+  const getStatusBadge = (status) => {
+    const statusClass = status === 'active' ? 'status-active' : 'status-inactive';
+    const statusText = status === 'active' ? 'Hoạt động' : 'Vô hiệu hóa';
+    return <span className={`status-badge ${statusClass}`}>{statusText}</span>;
+  };
+
+  return (
+    <div className="customers-content">
+      <div className="content-header">
+        <h2>Quản lý tài khoản khách hàng</h2>
+        <button 
+          className="btn btn-primary"
+          onClick={() => loadCustomers(true)}
+          disabled={loading}
+        >
+          <FiSearch className="btn-icon" />
+          {loading ? 'Đang tải...' : 'Làm mới'}
+        </button>
       </div>
+
+      {loading ? (
+        <div className="loading-state">
+          <div className="loading-spinner"></div>
+          <p>Đang tải danh sách khách hàng...</p>
+        </div>
+      ) : (
+        <div className="customers-table-container">
+          <table className="customers-table">
+            <thead>
+              <tr>
+                <th>Tên khách hàng</th>
+                <th>Email</th>
+                <th>Số điện thoại</th>
+                <th>Điểm tích lũy</th>
+                <th>Trạng thái</th>
+                <th>Thao tác</th>
+              </tr>
+            </thead>
+            <tbody>
+              {customers.length === 0 ? (
+                <tr>
+                  <td colSpan="6" className="no-data">
+                    Không có khách hàng nào
+                  </td>
+                </tr>
+              ) : (
+                customers.map((customer) => (
+                  <tr key={customer.userId}>
+                    <td>{customer.username || 'N/A'}</td>
+                    <td>{customer.email || customer.username}</td>
+                    <td>{customer.phoneNumber || 'Chưa cập nhật'}</td>
+                    <td>
+                      <span className="reward-points">
+                        {customer.rewardPoints || 0} điểm
+                      </span>
+                    </td>
+                    <td>{getStatusBadge(customer.isActive ? 'active' : 'inactive')}</td>
+                    <td>
+                      <div className="action-buttons">
+                        <button
+                          className="btn btn-sm btn-info"
+                          onClick={() => handleViewCustomer(customer)}
+                          title="Xem chi tiết"
+                        >
+                          <FiEye size={14} />
+                        </button>
+                        <button
+                          className={`btn btn-sm ${customer.isActive ? 'btn-warning' : 'btn-success'}`}
+                          onClick={() => handleToggleCustomerStatus(customer)}
+                          title={customer.isActive ? 'Vô hiệu hóa' : 'Kích hoạt'}
+                        >
+                          {customer.isActive ? '🔒' : '🔓'}
+                        </button>
+                        <button
+                          className="btn btn-sm btn-danger"
+                          onClick={() => handleDeleteCustomer(customer)}
+                          title="Xóa tài khoản"
+                        >
+                          <FiTrash2 size={14} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Customer Detail Modal */}
+      {viewModalOpen && selectedCustomer && (
+        <div className="modal-overlay" onClick={() => setViewModalOpen(false)}>
+          <div className="customer-detail-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="customer-modal-header">
+              <div className="customer-avatar">
+                <FiUsers size={32} />
+              </div>
+              <div className="customer-title">
+                <h2>{selectedCustomer.username || 'Khách hàng'}</h2>
+                <p className="customer-role">{selectedCustomer.role || 'User'}</p>
+              </div>
+              <button 
+                className="modal-close-btn"
+                onClick={() => setViewModalOpen(false)}
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div className="customer-modal-body">
+              <div className="customer-stats">
+                <div className="stat-card">
+                  <div className="stat-icon">
+                    <FiStar className="star-icon" />
+                  </div>
+                  <div className="stat-content">
+                    <h4>{selectedCustomer.rewardPoints || 0}</h4>
+                    <p>Điểm tích lũy</p>
+                  </div>
+                </div>
+                <div className="stat-card">
+                  <div className="stat-icon voucher">
+                    <FiGlobe className="voucher-icon" />
+                  </div>
+                  <div className="stat-content">
+                    <h4>{selectedCustomer.voucherCount || 0}</h4>
+                    <p>Voucher</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="customer-details">
+                <div className="detail-section">
+                  <h3>Thông tin liên hệ</h3>
+                  <div className="detail-grid">
+                    <div className="detail-item">
+                      <label>Email</label>
+                      <span>{selectedCustomer.email || selectedCustomer.username}</span>
+                    </div>
+                    <div className="detail-item">
+                      <label>Số điện thoại</label>
+                      <span>{selectedCustomer.phoneNumber || 'Chưa cập nhật'}</span>
+                    </div>
+                    <div className="detail-item">
+                      <label>Địa chỉ</label>
+                      <span>{selectedCustomer.address || 'Chưa cập nhật'}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="customer-modal-footer">
+              <button 
+                className={`btn ${selectedCustomer.isActive ? 'btn-warning' : 'btn-success'}`}
+                onClick={() => {
+                  handleToggleCustomerStatus(selectedCustomer);
+                  setViewModalOpen(false);
+                }}
+              >
+                {selectedCustomer.isActive ? '🔒 Vô hiệu hóa' : '🔓 Kích hoạt'}
+              </button>
+              <button 
+                className="btn btn-danger"
+                onClick={() => {
+                  handleDeleteCustomer(selectedCustomer);
+                  setViewModalOpen(false);
+                }}
+              >
+                <FiTrash2 size={16} /> Xóa tài khoản
+              </button>
+              <button 
+                className="btn btn-secondary"
+                onClick={() => setViewModalOpen(false)}
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
-    <div className="customers-table">
-      <table>
-        <thead>
-          <tr>
-            <th>Tên</th>
-            <th>Email</th>
-            <th>Số điện thoại</th>
-            <th>Loại tài khoản</th>
-            <th>Trạng thái</th>
-            <th>Thao tác</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>Nguyễn Văn A</td>
-            <td>nguyenvana@email.com</td>
-            <td>0123456789</td>
-            <td>Khách hàng</td>
-            <td><span className="status active">Hoạt động</span></td>
-            <td>
-              <button className="action-btn">✏️ Sửa</button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-);
+  );
+};
 
 const PromotionsContent = () => (
   <div className="promotions-content">

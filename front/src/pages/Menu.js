@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import Header from '../components/Header';
+import CheckoutModal from '../components/CheckoutModal';
+import ToppingModal from '../components/ToppingModal';
 import cakeService from '../services/cakeService';
 import drinkService from '../services/drinkService';
+import toppingService from '../services/toppingService';
 import orderService from '../services/orderService';
 import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
@@ -11,9 +14,13 @@ const Menu = () => {
   const [activeFilter, setActiveFilter] = useState('All');
   const [drinks, setDrinks] = useState([]);
   const [cakes, setCakes] = useState([]);
+  const [toppings, setToppings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
+  const [toppingModalOpen, setToppingModalOpen] = useState(false);
+  const [selectedDrinkForTopping, setSelectedDrinkForTopping] = useState(null);
+  const [selectedToppings, setSelectedToppings] = useState([]);
   
   const { user, isAuthenticated } = useAuth();
   const { 
@@ -25,6 +32,7 @@ const Menu = () => {
     updateQuantity: updateCartQuantity,
     clearCart,
     getItemPrice,
+    getItemTotalPrice,
     isItemInCart,
     getItemInCart
   } = useCart();
@@ -34,13 +42,15 @@ const Menu = () => {
     const fetchMenuData = async () => {
       try {
         setLoading(true);
-        const [drinksResponse, cakesResponse] = await Promise.all([
+        const [drinksResponse, cakesResponse, toppingsResponse] = await Promise.all([
           drinkService.getAllDrinks(),
-          cakeService.getAllCakes()
+          cakeService.getAllCakes(),
+          toppingService.getAllToppings()
         ]);
         
         setDrinks(drinksResponse);
         setCakes(cakesResponse);
+        setToppings(toppingsResponse);
         setError(null);
       } catch (err) {
         console.error('Error fetching menu data:', err);
@@ -68,17 +78,53 @@ const Menu = () => {
     }));
   };
 
-  const handleAddToCart = (item) => {
+  const handleAddToCart = (item, toppings = []) => {
     const quantity = getItemQuantity(item.id);
+    
+    // Create unique ID for items with different topping combinations
+    const toppingIds = toppings.map(t => t.originalId).sort().join(',');
+    const uniqueId = toppings.length > 0 ? `${item.id}_${toppingIds}` : item.id;
+    
+    // Create enhanced item with toppings
+    const itemWithToppings = {
+      ...item,
+      id: uniqueId, // Use unique ID for cart identification
+      originalId: item.id, // Keep original product ID for API
+      selectedToppings: toppings,
+      toppingIds: toppings.map(t => t.originalId),
+      // Calculate total price including toppings
+      totalPrice: item.price + toppings.reduce((sum, topping) => sum + topping.price, 0)
+    };
+    
     // Add to cart with specified quantity
     for (let i = 0; i < quantity; i++) {
-      addToCart(item);
+      addToCart(itemWithToppings);
     }
     // Reset quantity to 1 after adding
     setItemQuantities(prev => ({
       ...prev,
       [item.id]: 1
     }));
+  };
+
+  const handleDrinkWithToppings = () => {
+    if (selectedDrinkForTopping) {
+      handleAddToCart(selectedDrinkForTopping, selectedToppings);
+      setToppingModalOpen(false);
+      setSelectedDrinkForTopping(null);
+      setSelectedToppings([]);
+    }
+  };
+
+  const toggleTopping = (topping) => {
+    setSelectedToppings(prev => {
+      const exists = prev.find(t => t.id === topping.id);
+      if (exists) {
+        return prev.filter(t => t.id !== topping.id);
+      } else {
+        return [...prev, topping];
+      }
+    });
   };
 
   // Transform API data to menu format
@@ -106,19 +152,41 @@ const Menu = () => {
     originalId: cake.id
   }));
 
-  const allItems = [...transformedDrinks, ...transformedCakes];
+  const transformedToppings = toppings.map(topping => ({
+    id: `topping_${topping.id}`,
+    name: topping.name || 'Topping',
+    description: 'Topping thêm hương vị đặc biệt cho đồ uống của bạn',
+    price: topping.price || 0, // Toppings sử dụng price theo backend model
+    category: 'Toppings',
+    image: topping.imageUrl || '🌟',
+    type: 'topping',
+    stock: topping.stock || 0,
+    originalId: topping.id
+  }));
+
+  const allItems = [...transformedDrinks, ...transformedCakes, ...transformedToppings];
   
   const filterItems = (categoryKey) => {
     if (categoryKey === 'All') return allItems;
+    if (categoryKey === 'Drink') {
+      return allItems.filter(item => item.type === 'drink');
+    }
+    if (categoryKey === 'Pastries') {
+      return allItems.filter(item => item.type === 'cake');
+    }
+    if (categoryKey === 'Toppings') {
+      return allItems.filter(item => item.type === 'topping');
+    }
     return allItems.filter(item => item.category === categoryKey);
   };
 
   const filteredItems = filterItems(activeFilter);
 
   const categories = [
-    { key: 'All', label: 'Tất cả' },
-    { key: 'Drink', label: 'Đồ uống' },
-    { key: 'Pastries', label: 'Bánh ngọt' }
+    { key: 'All', label: 'Tất cả', icon: '🍽️' },
+    { key: 'Drink', label: 'Đồ uống', icon: '☕' },
+    { key: 'Pastries', label: 'Bánh ngọt', icon: '🧁' },
+    { key: 'Toppings', label: 'Topping', icon: '🌟' }
   ];
 
   const activeLabel = categories.find(c => c.key === activeFilter)?.label || activeFilter;
@@ -131,6 +199,8 @@ const Menu = () => {
         return 'Các đồ uống thơm ngon từ cà phê đến trà';
       case 'Pastries':
         return 'Bánh nướng tươi ngon, phù hợp dùng kèm cà phê';
+      case 'Toppings':
+        return 'Toppings đa dạng để tùy chỉnh đồ uống yêu thích';
       default:
         return '';
     }
@@ -176,8 +246,8 @@ const Menu = () => {
     }
   };
 
-  // Checkout function
-  const handleCheckout = async () => {
+  // Open checkout modal
+  const handleCheckout = () => {
     if (!isAuthenticated) {
       alert('Vui lòng đăng nhập để đặt hàng');
       return;
@@ -188,98 +258,27 @@ const Menu = () => {
       return;
     }
 
-    setCheckoutLoading(true);
+    setCheckoutModalOpen(true);
+  };
 
-    try {
-      console.log('🛒 Starting checkout process...');
-      console.log('📦 Cart items:', cartItems);
-      console.log('👤 User:', user);
-
-      // Validate cart items trước khi đặt hàng
-      await validateCartItems();
-
-      // Transform cart items to match backend CreateOrderRequest format
-      const orderItems = cartItems.map(item => {
-        const orderItem = {
-          productId: String(item.originalId), // Ensure string type
-          productType: item.type === 'drink' ? 'Drink' : 'Cake', // Capitalize for backend
-          quantity: item.quantity,
-          toppingIds: [] // No toppings for now, can be extended later
-        };
-        
-        console.log('🔄 Transformed item:', orderItem);
-        return orderItem;
-      });
-
-      // Create order request - Backend sẽ tự tính giá và lấy userId từ token
-      const orderRequest = {
-        items: orderItems
-        // Không cần userId, totalPrice, status - backend tự xử lý
-      };
-
-      console.log('📤 Order request being sent:', orderRequest);
-
-      // Call orderService
-      const response = await orderService.createOrder(orderRequest);
-      
-      console.log('✅ Order created successfully:', response);
-      
-      // Extract order info from response
-      const order = response.order || response;
-      const orderId = order.id || order.orderId || 'N/A';
-      const totalPrice = order.totalPrice || order.finalPrice || cartTotal;
-      const status = order.status || 'Pending';
-      
-      // Show success message with order details
-      alert(`🎉 Đặt hàng thành công!
-
-📋 Mã đơn hàng: #${orderId}
-💰 Tổng tiền: ₫${totalPrice.toLocaleString()}
-📊 Trạng thái: ${status}
-📅 Thời gian: ${new Date().toLocaleString()}
-
-Cảm ơn bạn đã đặt hàng! 
-Chúng tôi sẽ xử lý đơn hàng sớm nhất có thể.`);
-      
-      // Clear cart after successful order
-      clearCart();
-      setItemQuantities({});
-      
-      // Optional: Save order info to localStorage for tracking
-      const orderHistory = JSON.parse(localStorage.getItem('orderHistory') || '[]');
-      orderHistory.unshift({
-        id: orderId,
-        totalPrice: totalPrice,
-        status: status,
-        items: cartItems.length,
-        createdAt: new Date().toISOString()
-      });
-      localStorage.setItem('orderHistory', JSON.stringify(orderHistory.slice(0, 10))); // Keep last 10 orders
-      
-    } catch (error) {
-      console.error('❌ Order creation failed:', error);
-      
-      let errorMessage = 'Có lỗi xảy ra khi đặt hàng. Vui lòng thử lại.';
-      
-      // Handle specific backend errors
-      if (error.message) {
-        if (error.message.includes('Not enough stock')) {
-          errorMessage = '❌ Một số sản phẩm đã hết hàng. Vui lòng kiểm tra lại giỏ hàng.';
-        } else if (error.message.includes('Cannot identify user')) {
-          errorMessage = '🔐 Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.';
-          // Optionally redirect to login
-          // navigate('/login');
-        } else if (error.message.includes('UserId is required')) {
-          errorMessage = '🔐 Lỗi xác thực người dùng. Vui lòng đăng nhập lại.';
-        } else {
-          errorMessage = error.message;
-        }
-      }
-      
-      alert(`🚫 Đặt hàng thất bại!\n\n${errorMessage}`);
-    } finally {
-      setCheckoutLoading(false);
-    }
+  // Handle successful order
+  const handleOrderSuccess = (orderInfo) => {
+    console.log('✅ Order completed successfully:', orderInfo);
+    
+    // Save order to history
+    const orderHistory = JSON.parse(localStorage.getItem('orderHistory') || '[]');
+    orderHistory.unshift({
+      id: orderInfo.orderId,
+      totalPrice: orderInfo.totalPrice,
+      status: orderInfo.status,
+      items: orderInfo.items.length,
+      customerInfo: orderInfo.customerInfo,
+      createdAt: new Date().toISOString()
+    });
+    localStorage.setItem('orderHistory', JSON.stringify(orderHistory.slice(0, 10)));
+    
+    // Reset item quantities
+    setItemQuantities({});
   };
 
   if (loading) {
@@ -335,113 +334,83 @@ Chúng tôi sẽ xử lý đơn hàng sớm nhất có thể.`);
               ))}
             </nav>
 
-            {/* Online Ordering Options */}
-            <div className="sidebar-actions">
-              <button className="action-btn primary">
-                <span className="btn-icon">🛒</span>
-                Đặt hàng trực tuyến
-              </button>
-              <button className="action-btn secondary">
-                <span className="btn-icon">📋</span>
-                Đặt chỗ
-              </button>
-            </div>
 
-            {/* Elegant Cart Summary */}
-            {cartItemCount > 0 ? (
-              <div className="elegant-cart-summary">
-                <div className="cart-summary-header">
-                  <div className="cart-brand">
-                    <div className="cart-brand-icon">�️</div>
-                    <div className="cart-brand-text">
-                      <h3 className="cart-title">Đơn hàng của bạn</h3>
-                      <span className="cart-subtitle">{cartItemCount} món đã chọn</span>
+
+            {/* New Cart Design */}
+            {cartItemCount > 0 && (
+              <div className="new-cart">
+                {/* Cart Header */}
+                <div className="cart-header">
+                  <h3 className="cart-title">Đơn hàng của bạn</h3>
+                  <span className="cart-count">{cartItemCount} món</span>
+                </div>
+                
+                {cartItems.map((item) => (
+                  <div key={item.id} className="new-cart-item">
+                    {/* Dòng 1: Hình ảnh - Tên sản phẩm */}
+                    <div className="item-line-1">
+                      <div className="item-img">
+                        {item.image && item.image.startsWith('http') ? (
+                          <img src={item.image} alt={item.name} className="img" />
+                        ) : (
+                          <span className="emoji">{item.image}</span>
+                        )}
+                      </div>
+                      <span className="name">{item.name}</span>
                     </div>
+                    
+                    {/* Hiển thị toppings nếu có */}
+                    {item.selectedToppings && item.selectedToppings.length > 0 && (
+                      <div className="item-toppings">
+                        {item.selectedToppings.map((topping, index) => (
+                          <div key={index} className="topping-item">
+                            <span className="topping-name">+ {topping.name} x1</span>
+                            <span className="topping-price">₫{getItemPrice(topping.price).toLocaleString()}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    
+                    {/* Dòng 2: Giá tiền */}
+                    <div className="item-line-2">
+                      <span className="price">₫{getItemTotalPrice(item).toLocaleString()}</span>
+                    </div>
+                    
+                    {/* Dòng 3: Số lượng hiện tại + nút giảm */}
+                    <div className="item-line-3">
+                      <span className="qty">Số lượng hiện tại: {item.quantity}</span>
+                      <button 
+                        className="minus-btn"
+                        onClick={() => {
+                          if (item.quantity === 1) {
+                            removeFromCart(item.id);
+                          } else {
+                            updateCartQuantity(item.id, item.quantity - 1);
+                          }
+                        }}
+                      >
+                        -
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                
+                {/* Tổng tiền */}
+                <div className="cart-summary">
+                  <div className="total-line">
+                    <span className="total-text">Tổng cộng:</span>
+                    <span className="total-price">₫{cartTotal.toLocaleString()}</span>
                   </div>
                 </div>
                 
-                <div className="elegant-cart-items">
-                  {cartItems.map((item) => (
-                    <div key={item.id} className="elegant-cart-item">
-                      <div className="cart-item-image">
-                        <span className="item-emoji">{item.image}</span>
-                      </div>
-                      <div className="cart-item-content">
-                        <div className="cart-item-main">
-                          <h4 className="cart-item-name">{item.name}</h4>
-                          <div className="cart-item-price-info">
-                            <span className="unit-price">₫{getItemPrice(item.price).toLocaleString()}</span>
-                            <span className="quantity-indicator">x {item.quantity}</span>
-                          </div>
-                        </div>
-                        <div className="cart-item-controls">
-                          <div className="quantity-controls">
-                            <button 
-                              className="qty-btn minus"
-                              onClick={() => updateCartQuantity(item.id, item.quantity - 1)}
-                            >
-                              −
-                            </button>
-                            <span className="quantity-display">{item.quantity}</span>
-                            <button 
-                              className="qty-btn plus"
-                              onClick={() => updateCartQuantity(item.id, item.quantity + 1)}
-                            >
-                              +
-                            </button>
-                          </div>
-                          <button 
-                            className="remove-item-btn"
-                            onClick={() => removeFromCart(item.id)}
-                            title="Xóa khỏi giỏ hàng"
-                          >
-                            🗑️
-                          </button>
-                        </div>
-                      </div>
-                      <div className="cart-item-total">
-                        <span className="item-total">₫{(getItemPrice(item.price) * item.quantity).toLocaleString()}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                
-                <div className="cart-summary-total">
-                  <div className="total-calculation">
-                    <div className="subtotal-line">
-                      <span className="subtotal-label">Tạm tính</span>
-                      <span className="subtotal-amount">₫{cartTotal.toLocaleString()}</span>
-                    </div>
-                    <div className="total-line">
-                      <span className="total-label">Tổng cộng</span>
-                      <span className="total-amount">₫{cartTotal.toLocaleString()}</span>
-                    </div>
-                  </div>
-                </div>
-                
+                {/* Nút thanh toán */}
                 <button 
-                  className="elegant-checkout-btn" 
+                  className="pay-btn" 
                   onClick={handleCheckout}
-                  disabled={checkoutLoading || cartItems.length === 0}
+                  disabled={cartItems.length === 0}
                 >
-                  <div className="checkout-btn-content">
-                    <span className="checkout-icon">
-                      {checkoutLoading ? '⏳' : '💳'}
-                    </span>
-                    <div className="checkout-text">
-                      <span className="checkout-label">
-                        {checkoutLoading ? 'Đang xử lý...' : 'Thanh toán'}
-                      </span>
-                      <span className="checkout-amount">₫{cartTotal.toLocaleString()}</span>
-                    </div>
-                  </div>
+                  THANH TOÁN
                 </button>
-              </div>
-            ) : (
-              <div className="empty-cart">
-                <div className="empty-cart-icon">🛒</div>
-                <p>Giỏ hàng trống</p>
-                <small>Thêm món yêu thích vào giỏ hàng</small>
               </div>
             )}
 
@@ -505,9 +474,16 @@ Chúng tôi sẽ xử lý đơn hàng sớm nhất có thể.`);
                         </button>
                         <button 
                           className="add-to-cart"
-                          onClick={() => handleAddToCart(item)}
+                          onClick={() => {
+                            if (item.type === 'drink') {
+                              setSelectedDrinkForTopping(item);
+                              setToppingModalOpen(true);
+                            } else {
+                              handleAddToCart(item);
+                            }
+                          }}
                         >
-                          Thêm vào giỏ
+                          {item.type === 'drink' ? 'Chọn topping' : 'Thêm vào giỏ'}
                         </button>
                       </div>
                     </div>
@@ -518,6 +494,29 @@ Chúng tôi sẽ xử lý đơn hàng sớm nhất có thể.`);
           </div>
         </div>
       </main>
+
+      {/* Checkout Modal */}
+      <CheckoutModal
+        isOpen={checkoutModalOpen}
+        onClose={() => setCheckoutModalOpen(false)}
+        onOrderSuccess={handleOrderSuccess}
+      />
+
+      {/* Topping Selection Modal */}
+      <ToppingModal
+        isOpen={toppingModalOpen}
+        onClose={() => {
+          setToppingModalOpen(false);
+          setSelectedDrinkForTopping(null);
+          setSelectedToppings([]);
+        }}
+        selectedDrink={selectedDrinkForTopping}
+        toppings={transformedToppings}
+        selectedToppings={selectedToppings}
+        onToggleTopping={toggleTopping}
+        onConfirm={handleDrinkWithToppings}
+        getItemQuantity={getItemQuantity}
+      />
     </div>
   );
 };
