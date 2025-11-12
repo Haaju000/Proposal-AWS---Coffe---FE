@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
 import orderService from '../services/orderService';
+import paymentService from '../services/paymentService';
 import '../css/CheckoutModal.css';
 
 const CheckoutModal = ({ isOpen, onClose, onOrderSuccess }) => {
@@ -16,6 +17,7 @@ const CheckoutModal = ({ isOpen, onClose, onOrderSuccess }) => {
     notes: ''
   });
   
+  const [paymentMethod, setPaymentMethod] = useState('COD'); // 'COD' hoặc 'VNPAY'
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
 
@@ -71,7 +73,8 @@ const CheckoutModal = ({ isOpen, onClose, onOrderSuccess }) => {
 
     try {
       console.log('🛒 Starting checkout with form data:', formData);
-      console.log('📦 Cart items:', cartItems);
+      console.log('� Payment method:', paymentMethod);
+      console.log('�📦 Cart items:', cartItems);
 
       // Validate cart items trước khi đặt hàng
       const validationPromises = cartItems.map(async (item) => {
@@ -123,47 +126,18 @@ const CheckoutModal = ({ isOpen, onClose, onOrderSuccess }) => {
 
       console.log('📤 Order request:', orderRequest);
 
-      // Call API
-      const response = await orderService.createOrder(orderRequest);
-      console.log('✅ Order created successfully:', response);
-      
-      // Extract order info
-      const order = response.order || response;
-      const orderId = order.id || order.orderId || 'N/A';
-      const totalPrice = order.totalPrice || order.finalPrice || cartTotal;
-      const status = order.status || 'Pending';
-      
-      // Success callback
-      if (onOrderSuccess) {
-        onOrderSuccess({
-          orderId,
-          totalPrice,
-          status,
-          customerInfo: formData,
-          items: cartItems
-        });
+      if (paymentMethod === 'VNPAY') {
+        // Xử lý thanh toán VNPay
+        await handleVNPayPayment(orderRequest);
+      } else {
+        // Xử lý đặt hàng COD (Cash on Delivery)
+        await handleCODOrder(orderRequest);
       }
       
-      // Clear cart and close modal
-      clearCart();
-      onClose();
-      
-      // Show success notification
-      alert(`🎉 Đặt hàng thành công!
-
-📋 Mã đơn hàng: #${orderId}
-👤 Khách hàng: ${formData.customerName}
-📱 SĐT: ${formData.phoneNumber}
-📍 Địa chỉ: ${formData.address}
-💰 Tổng tiền: ₫${totalPrice.toLocaleString()}
-📊 Trạng thái: ${status}
-
-Cảm ơn bạn đã đặt hàng! Chúng tôi sẽ liên hệ sớm nhất.`);
-      
     } catch (error) {
-      console.error('❌ Order creation failed:', error);
+      console.error('❌ Order processing failed:', error);
       
-      let errorMessage = 'Có lỗi xảy ra khi đặt hàng. Vui lòng thử lại.';
+      let errorMessage = 'Có lỗi xảy ra khi xử lý đơn hàng. Vui lòng thử lại.';
       
       if (error.message) {
         if (error.message.includes('Not enough stock')) {
@@ -175,9 +149,103 @@ Cảm ơn bạn đã đặt hàng! Chúng tôi sẽ liên hệ sớm nhất.`);
         }
       }
       
-      alert(`🚫 Đặt hàng thất bại!\n\n${errorMessage}`);
+      alert(`🚫 Xử lý đơn hàng thất bại!\n\n${errorMessage}`);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Xử lý đặt hàng COD
+  const handleCODOrder = async (orderRequest) => {
+    // Call API
+    const response = await orderService.createOrder(orderRequest);
+    console.log('✅ COD Order created successfully:', response);
+    
+    // Extract order info
+    const order = response.order || response;
+    const orderId = order.id || order.orderId || 'N/A';
+    const totalPrice = order.totalPrice || order.finalPrice || cartTotal;
+    const status = order.status || 'Pending';
+    
+    // Success callback
+    if (onOrderSuccess) {
+      onOrderSuccess({
+        orderId,
+        totalPrice,
+        status,
+        customerInfo: formData,
+        items: cartItems
+      });
+    }
+    
+    // Clear cart and close modal
+    clearCart();
+    onClose();
+    
+    // Show success notification
+    alert(`🎉 Đặt hàng thành công!
+
+📋 Mã đơn hàng: #${orderId}
+👤 Khách hàng: ${formData.customerName}
+📱 SĐT: ${formData.phoneNumber}
+📍 Địa chỉ: ${formData.address}
+💰 Tổng tiền: ₫${totalPrice.toLocaleString()}
+📊 Trạng thái: ${status}
+💵 Thanh toán: Thu tiền khi giao hàng (COD)
+
+Cảm ơn bạn đã đặt hàng! Chúng tôi sẽ liên hệ sớm nhất.`);
+  };
+
+  // Xử lý thanh toán VNPay
+  const handleVNPayPayment = async (orderRequest) => {
+    try {
+      // Bước 1: Tạo đơn hàng trước để có orderId
+      console.log('📦 Creating order first for VNPay payment...');
+      const orderResponse = await orderService.createOrder(orderRequest);
+      console.log('✅ Order created for VNPay:', orderResponse);
+      
+      const order = orderResponse.order || orderResponse;
+      const orderId = order.id || order.orderId;
+      
+      if (!orderId) {
+        throw new Error('Không thể tạo mã đơn hàng');
+      }
+      
+      // Bước 2: Tạo VNPay payment URL với orderId
+      console.log('💳 Creating VNPay payment URL for order:', orderId);
+      const returnUrl = `${window.location.origin}/payment-result`;
+      
+      const paymentResponse = await paymentService.createVNPayPayment(orderId, returnUrl);
+      console.log('✅ VNPay payment response:', paymentResponse);
+      
+      // Lưu thông tin order để xử lý sau khi thanh toán
+      const orderData = {
+        orderId: orderId,
+        orderRequest,
+        cartItems,
+        cartTotal,
+        customerInfo: formData,
+        paymentMethod: 'VNPAY',
+        timestamp: new Date().toISOString()
+      };
+      
+      localStorage.setItem('vnpayOrderData', JSON.stringify(orderData));
+      
+      // Clear cart và close modal trước khi redirect
+      clearCart();
+      onClose();
+      
+      // Redirect đến VNPay
+      if (paymentResponse.paymentUrl) {
+        console.log('🚀 Redirecting to VNPay...');
+        paymentService.redirectToVNPay(paymentResponse.paymentUrl);
+      } else {
+        throw new Error('Không nhận được URL thanh toán từ VNPay');
+      }
+      
+    } catch (error) {
+      console.error('❌ VNPay payment failed:', error);
+      throw new Error(`Lỗi tạo thanh toán VNPay: ${error.message}`);
     }
   };
 
@@ -308,6 +376,48 @@ Cảm ơn bạn đã đặt hàng! Chúng tôi sẽ liên hệ sớm nhất.`);
           </div>
         </div>
 
+        {/* Payment Method Selection */}
+        <div className="payment-method-section">
+          <h3>💳 Phương thức thanh toán</h3>
+          <div className="payment-methods">
+            <div className="payment-method">
+              <input
+                type="radio"
+                id="cod"
+                name="paymentMethod"
+                value="COD"
+                checked={paymentMethod === 'COD'}
+                onChange={(e) => setPaymentMethod(e.target.value)}
+              />
+              <label htmlFor="cod" className="payment-method-label">
+                <div className="payment-method-icon">💵</div>
+                <div className="payment-method-info">
+                  <span className="payment-method-name">Thu tiền khi giao hàng (COD)</span>
+                  <span className="payment-method-desc">Thanh toán bằng tiền mặt khi nhận hàng</span>
+                </div>
+              </label>
+            </div>
+            
+            <div className="payment-method">
+              <input
+                type="radio"
+                id="vnpay"
+                name="paymentMethod"
+                value="VNPAY"
+                checked={paymentMethod === 'VNPAY'}
+                onChange={(e) => setPaymentMethod(e.target.value)}
+              />
+              <label htmlFor="vnpay" className="payment-method-label">
+                <div className="payment-method-icon">💳</div>
+                <div className="payment-method-info">
+                  <span className="payment-method-name">Thanh toán VNPay</span>
+                  <span className="payment-method-desc">Thanh toán online qua VNPay (ATM, Visa, MasterCard)</span>
+                </div>
+              </label>
+            </div>
+          </div>
+        </div>
+
         {/* Modal Footer */}
         <div className="checkout-footer">
           <button className="btn btn-secondary" onClick={onClose}>
@@ -318,7 +428,8 @@ Cảm ơn bạn đã đặt hàng! Chúng tôi sẽ liên hệ sớm nhất.`);
             onClick={handleSubmitOrder}
             disabled={loading || cartItems.length === 0}
           >
-            {loading ? '🔄 Đang xử lý...' : '🛒 Đặt hàng ngay'}
+            {loading ? '🔄 Đang xử lý...' : 
+             paymentMethod === 'VNPAY' ? '💳 Thanh toán VNPay' : '🛒 Đặt hàng ngay'}
           </button>
         </div>
       </div>

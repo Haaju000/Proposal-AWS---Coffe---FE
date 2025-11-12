@@ -27,6 +27,7 @@ import ShipperDashboard from './pages/ShipperDashboard';
 import Profile from './pages/Profile';
 import Orders from './pages/Orders';
 import Loyalty from './pages/Loyalty';
+import PaymentResult from './pages/PaymentResult';
 
 // Import components
 import ProtectedRoute from './components/ProtectedRoute';
@@ -102,6 +103,7 @@ function App() {
               </ProtectedRoute>
             } 
           />
+          <Route path="/payment/result" element={<PaymentResult />} />
         </Routes>
         </Router>
       </CartProvider>

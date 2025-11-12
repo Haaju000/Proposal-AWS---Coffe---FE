@@ -446,7 +446,7 @@ const Menu = () => {
                   <div className="item-details">
                     <div className="item-header">
                       <h3 className="item-name">{item.name}</h3>
-                      <button className="favorite-btn">♡</button>
+                      
                     </div>
                     <p className="item-description">{item.description}</p>
                     <div className="item-stock-info">

@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
+import ShipperRegistration from './ShipperRegistration';
 import '../css/Header.css';
 
 const Header = () => {
@@ -10,6 +11,7 @@ const Header = () => {
   const { cartItems, cartItemCount, cartTotal, getItemPrice } = useCart();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showCartMenu, setShowCartMenu] = useState(false);
+  const [showShipperModal, setShowShipperModal] = useState(false);
   const cartMenuRef = useRef(null);
   
   const isActive = (path) => {
@@ -75,6 +77,16 @@ const Header = () => {
         </nav>
         
         <div className="header-actions">
+          {/* Shipper Registration Button */}
+          <button 
+            className="shipper-btn"
+            onClick={() => setShowShipperModal(true)}
+            title="Trở thành đối tác giao hàng"
+          >
+            <span className="shipper-icon">🚚</span>
+            <span className="shipper-text">Trở thành Shipper</span>
+          </button>
+
           {/* Cart Menu */}
           <div className="cart-menu" ref={cartMenuRef}>
             <div className="cart-icon" onClick={toggleCartMenu}>
@@ -251,6 +263,12 @@ const Header = () => {
           )}
         </div>
       </div>
+
+      {/* Shipper Registration Modal */}
+      <ShipperRegistration 
+        isOpen={showShipperModal}
+        onClose={() => setShowShipperModal(false)}
+      />
     </header>
   );
 };

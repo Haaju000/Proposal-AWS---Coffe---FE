@@ -82,6 +82,38 @@
   gap: 1rem;
 }
 
+/* Shipper Button */
+.shipper-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: linear-gradient(135deg, #8B4513 0%, #D2691E 100%);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 25px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(139, 69, 19, 0.2);
+}
+
+.shipper-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(139, 69, 19, 0.3);
+  background: linear-gradient(135deg, #A0522D 0%, #FF8C00 100%);
+}
+
+.shipper-icon {
+  font-size: 16px;
+}
+
+.shipper-text {
+  font-size: 13px;
+  white-space: nowrap;
+}
+
 .cart-icon,
 .user-icon {
   position: relative;
@@ -610,6 +642,15 @@
 
   .user-username {
     display: none;
+  }
+
+  /* Hide shipper text on mobile */
+  .shipper-text {
+    display: none;
+  }
+
+  .shipper-btn {
+    padding: 8px 12px;
   }
 
   .user-dropdown {
