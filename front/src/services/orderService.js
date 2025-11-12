@@ -14,19 +14,22 @@ const apiClient = axios.create({
 
 console.log('✅ OrderService initialized with base URL:', API_BASE_URL);
 
-// Add token interceptor
+// Add token interceptor - match authService priority
 apiClient.interceptors.request.use(
   (config) => {
-    // Get token - try multiple storage keys
-    const token = localStorage.getItem('access_token') 
-                  || localStorage.getItem('id_token')
-                  || localStorage.getItem('token');
+    // Priority: id_token > access_token > local_token (same as authService)
+    const idToken = localStorage.getItem('id_token');
+    const accessToken = localStorage.getItem('access_token');
+    const localToken = localStorage.getItem('local_token');
+    
+    const token = idToken || accessToken || localToken;
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     
     console.log('🔑 Request with token:', token ? 'Present' : 'Missing');
+    console.log('🔍 Token type:', idToken ? 'id_token' : accessToken ? 'access_token' : localToken ? 'local_token' : 'none');
     return config;
   },
   (error) => Promise.reject(error)
@@ -121,6 +124,60 @@ const orderService = {
         throw new Error(error.response.data.error);
       }
       throw error;
+    }
+  },
+
+  // Get user's orders from localStorage (orderId list) then fetch details
+  getUserOrders: async () => {
+    try {
+      console.log('📋 Getting user orders from localStorage...');
+      
+      // Get order IDs from localStorage
+      const orderHistory = JSON.parse(localStorage.getItem('orderHistory') || '[]');
+      console.log('📋 Found order IDs in localStorage:', orderHistory);
+      
+      if (orderHistory.length === 0) {
+        console.log('📋 No orders found in localStorage');
+        return [];
+      }
+      
+      // Fetch details for each order
+      const orderPromises = orderHistory.map(async (orderItem) => {
+        try {
+          // orderItem có thể là string (orderId) hoặc object {orderId, ...}
+          const orderId = typeof orderItem === 'string' ? orderItem : orderItem.orderId;
+          console.log('📋 Fetching details for order:', orderId);
+          
+          // Call GET /Order/{id} endpoint directly (User/Admin can access this)
+          const response = await apiClient.get(`/Order/${orderId}`);
+          console.log('✅ Fetched order details:', response.data);
+          return response.data;
+        } catch (error) {
+          console.error('❌ Failed to fetch order details for', typeof orderItem === 'string' ? orderItem : orderItem.orderId, ':', error);
+          
+          // Return localStorage info if API fails
+          const orderId = typeof orderItem === 'string' ? orderItem : orderItem.orderId;
+          return {
+            orderId: orderId,
+            status: typeof orderItem === 'object' ? orderItem.status || 'Unknown' : 'Unknown',
+            finalPrice: typeof orderItem === 'object' ? orderItem.finalPrice : 0,
+            createdAt: typeof orderItem === 'object' ? orderItem.createdAt : new Date().toISOString(),
+            items: [{
+              productName: 'Chi tiết không khả dụng',
+              quantity: 1,
+              toppings: []
+            }]
+          };
+        }
+      });
+      
+      const orders = await Promise.all(orderPromises);
+      console.log('✅ User orders retrieved successfully:', orders);
+      return orders.filter(order => order !== null); // Remove any null results
+      
+    } catch (error) {
+      console.error('❌ Get user orders error:', error);
+      return []; // Return empty array on error
     }
   },
 

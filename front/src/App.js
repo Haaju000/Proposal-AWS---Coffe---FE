@@ -103,7 +103,7 @@ function App() {
               </ProtectedRoute>
             } 
           />
-          <Route path="/payment/result" element={<PaymentResult />} />
+          <Route path="/payment-result" element={<PaymentResult />} />
         </Routes>
         </Router>
       </CartProvider>

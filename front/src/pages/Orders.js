@@ -1,209 +1,244 @@
 import React, { useState, useEffect } from 'react';
-import Header from '../components/Header';
-import { useAuth } from '../contexts/AuthContext';
+import PaymentButton from '../components/PaymentButton';
 import orderService from '../services/orderService';
 import '../css/Orders.css';
 
 const Orders = () => {
-  const { user, isAuthenticated } = useAuth();
-  const [activeTab, setActiveTab] = useState('all');
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (isAuthenticated) {
-      fetchOrders();
-    } else {
-      setLoading(false);
-    }
-  }, [isAuthenticated]);
+    loadOrders();
+  }, []);
 
-  const fetchOrders = async () => {
+  const loadOrders = async () => {
     try {
       setLoading(true);
-      
-      // Lấy order history từ localStorage trước (nhanh hơn)
-      const orderHistory = JSON.parse(localStorage.getItem('orderHistory') || '[]');
-      if (orderHistory.length > 0) {
-        setOrders(orderHistory);
-      }
-      
-      // TODO: Sau đó fetch từ API (khi có user orders endpoint)
-      // const apiOrders = await orderService.getUserOrders();
-      // setOrders(apiOrders);
-      
-      setLoading(false);
+      const userOrders = await orderService.getUserOrders();
+      console.log('Loaded orders from API:', userOrders);
+      console.log('Orders structure:', userOrders?.map(o => ({
+        orderId: o?.orderId,
+        status: o?.status,
+        finalPrice: o?.finalPrice,
+        items: o?.items?.length || 0
+      })));
+      setOrders(userOrders || []);
     } catch (error) {
-      console.error('❌ Error fetching orders:', error);
-      setError('Không thể tải danh sách đơn hàng');
+      console.error('Load orders error:', error);
+      
+      // Handle specific errors
+      if (error.message.includes('403') || error.message.includes('Forbidden')) {
+        // User role doesn't have permission to access GET /Order (Admin only)
+        console.log('User does not have admin permissions to view all orders');
+        setOrders([]);
+        // Could show a message here that user orders are not available
+      } else if (error.message.includes('401') || error.message.includes('Unauthorized')) {
+        // Token expired or invalid
+        console.log('User not authorized - token may be expired');
+        setOrders([]);
+        // Could redirect to login here
+      } else {
+        // Other errors (network, server, etc.)
+        console.log('API error, no orders available');
+        setOrders([]);
+      }
+    } finally {
       setLoading(false);
     }
   };
 
-  // Mock order data
-  const mockOrders = [
-    {
-      id: 'ORD-001',
-      date: '2025-10-20',
-      status: 'delivered',
-      total: 25.50,
-      items: [
-        { name: 'Caramel Macchiato', quantity: 2, price: 8.50 },
-        { name: 'Chocolate Croissant', quantity: 1, price: 8.50 }
-      ]
-    },
-    {
-      id: 'ORD-002',
-      date: '2025-10-18',
-      status: 'delivered',
-      total: 15.75,
-      items: [
-        { name: 'Americano', quantity: 1, price: 6.25 },
-        { name: 'Blueberry Muffin', quantity: 1, price: 9.50 }
-      ]
-    },
-    {
-      id: 'ORD-003',
-      date: '2025-10-15',
-      status: 'cancelled',
-      total: 32.00,
-      items: [
-        { name: 'Cappuccino', quantity: 3, price: 7.50 },
-        { name: 'Avocado Toast', quantity: 1, price: 9.50 }
-      ]
-    }
-  ];
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'delivered': return 'success';
-      case 'processing': return 'warning';
-      case 'cancelled': return 'danger';
-      default: return 'default';
-    }
+  const handlePaymentSuccess = (orderId) => {
+    console.log('Payment initiated for order:', orderId);
+    // PaymentButton sẽ tự redirect, không cần làm gì thêm
   };
 
-  const getStatusText = (status) => {
-    switch (status) {
-      case 'delivered': return 'Delivered';
-      case 'processing': return 'Processing';
-      case 'cancelled': return 'Cancelled';
-      default: return status;
-    }
+  const handlePaymentError = (error) => {
+    alert(`Lỗi thanh toán: ${error}`);
   };
 
-  const filteredOrders = mockOrders.filter(order => {
-    if (activeTab === 'all') return true;
-    return order.status === activeTab;
-  });
-
-  return (
-    <div className="orders-page">
-      <Header />
-      
-      <main className="orders-main">
-        <div className="orders-container">
-          <div className="orders-header">
-            <h1 className="orders-title">Order History</h1>
-            <p className="orders-subtitle">Track and manage all your coffee orders</p>
-          </div>
-
-          <div className="orders-tabs">
-            <button 
-              className={`tab-btn ${activeTab === 'all' ? 'active' : ''}`}
-              onClick={() => setActiveTab('all')}
-            >
-              All Orders
-            </button>
-            <button 
-              className={`tab-btn ${activeTab === 'delivered' ? 'active' : ''}`}
-              onClick={() => setActiveTab('delivered')}
-            >
-              Delivered
-            </button>
-            <button 
-              className={`tab-btn ${activeTab === 'processing' ? 'active' : ''}`}
-              onClick={() => setActiveTab('processing')}
-            >
-              Processing
-            </button>
-            <button 
-              className={`tab-btn ${activeTab === 'cancelled' ? 'active' : ''}`}
-              onClick={() => setActiveTab('cancelled')}
-            >
-              Cancelled
-            </button>
-          </div>
-
-          <div className="orders-content">
-            {filteredOrders.length > 0 ? (
-              <div className="orders-list">
-                {filteredOrders.map(order => (
-                  <div key={order.id} className="order-card">
-                    <div className="order-header">
-                      <div className="order-info">
-                        <h3 className="order-id">Order #{order.id}</h3>
-                        <p className="order-date">{new Date(order.date).toLocaleDateString('en-US', { 
-                          year: 'numeric', 
-                          month: 'long', 
-                          day: 'numeric' 
-                        })}</p>
-                      </div>
-                      <div className="order-status">
-                        <span className={`status-badge ${getStatusColor(order.status)}`}>
-                          {getStatusText(order.status)}
-                        </span>
-                        <div className="order-total">${order.total.toFixed(2)}</div>
-                      </div>
-                    </div>
-
-                    <div className="order-items">
-                      {order.items.map((item, index) => (
-                        <div key={index} className="order-item">
-                          <div className="item-info">
-                            <span className="item-name">{item.name}</span>
-                            <span className="item-quantity">x{item.quantity}</span>
-                          </div>
-                          <span className="item-price">${item.price.toFixed(2)}</span>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="order-actions">
-                      <button className="action-btn secondary">View Details</button>
-                      {order.status === 'delivered' && (
-                        <button className="action-btn primary">Reorder</button>
-                      )}
-                      {order.status === 'processing' && (
-                        <button className="action-btn danger">Cancel Order</button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="empty-state">
-                <div className="empty-icon">
-                  <svg width="64" height="64" viewBox="0 0 24 24" fill="none">
-                    <path d="M16 4H18C19.1 4 20 4.9 20 6V18C20 19.1 19.1 20 18 20H6C4.9 20 4 19.1 4 18V6C4 4.9 4.9 4 6 4H8M16 4V2M8 4V2M8 4H16M8 10H16M8 14H13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </div>
-                <h3>No orders found</h3>
-                <p>You haven't placed any orders yet. Start browsing our menu!</p>
-                <button className="empty-action-btn">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                  Browse Menu
-                </button>
-              </div>
-            )}
+  if (loading) {
+    return (
+      <div className="orders-container">
+        <div className="loading-container">
+          <div className="coffee-loader">
+            <div className="coffee-cup">☕</div>
+            <p>Đang tải đơn hàng của bạn...</p>
           </div>
         </div>
-      </main>
+      </div>
+    );
+  }
+
+  return (
+    <div className="orders-container">
+      <div className="orders-header">
+        <h1 className="orders-title">
+          <span className="coffee-icon">☕</span>
+          Đơn hàng của tôi
+        </h1>
+        <p className="orders-subtitle">Theo dõi hành trình cà phê của bạn</p>
+      </div>
+      
+      {orders.length === 0 ? (
+        <div className="empty-orders">
+          <div className="empty-icon">📋</div>
+          <h3>Chưa có đơn hàng nào</h3>
+          <p>Hãy khám phá menu và đặt ly cà phê đầu tiên của bạn!</p>
+          <button className="btn-explore" onClick={() => window.location.href = '/menu'}>
+            Khám phá Menu
+          </button>
+        </div>
+      ) : (
+        <div className="orders-grid">
+          {orders.map(order => (
+            <div key={order.orderId || Math.random()} className="order-card">
+              {/* Order Header */}
+              <div className="order-header">
+                <div className="order-info">
+                  <h3 className="order-id">
+                    #{order.orderId ? order.orderId.slice(-8).toUpperCase() : 'N/A'}
+                  </h3>
+                  <p className="order-date">
+                    {order.createdAt ? new Date(order.createdAt).toLocaleDateString('vi-VN', {
+                      day: '2-digit',
+                      month: '2-digit', 
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    }) : 'N/A'}
+                  </p>
+                </div>
+                <div className={`status-badge status-${order.status?.toLowerCase() || 'unknown'}`}>
+                  <span className="status-dot"></span>
+                  {getStatusText(order.status)}
+                </div>
+              </div>
+
+              {/* Order Details */}
+              <div className="order-details">
+                {/* User ID */}
+                {order.userId && (
+                  <div className="detail-row">
+                    <span className="detail-label">👤 Khách hàng:</span>
+                    <span className="detail-value">{order.userId.slice(-8).toUpperCase()}</span>
+                  </div>
+                )}
+
+                {/* Price Information */}
+                <div className="price-section">
+                  {order.totalPrice && order.totalPrice !== order.finalPrice && (
+                    <div className="detail-row">
+                      <span className="detail-label">💰 Tổng tiền gốc:</span>
+                      <span className="detail-value original-price">
+                        {order.totalPrice.toLocaleString('vi-VN')} VNĐ
+                      </span>
+                    </div>
+                  )}
+                  
+                  {order.appliedVoucherCode && (
+                    <div className="detail-row voucher-row">
+                      <span className="detail-label">🎫 Mã giảm giá:</span>
+                      <span className="detail-value voucher-code">{order.appliedVoucherCode}</span>
+                    </div>
+                  )}
+                  
+                  <div className="detail-row final-price-row">
+                    <span className="detail-label">💳 Thành tiền:</span>
+                    <span className="detail-value final-price">
+                      {order.finalPrice ? order.finalPrice.toLocaleString('vi-VN') : '0'} VNĐ
+                    </span>
+                  </div>
+                </div>
+
+                {/* Completion Time */}
+                {order.completedAt && (
+                  <div className="detail-row">
+                    <span className="detail-label">✅ Hoàn thành:</span>
+                    <span className="detail-value">
+                      {new Date(order.completedAt).toLocaleDateString('vi-VN', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Items List */}
+              <div className="items-section">
+                <h4 className="items-title">🛍️ Chi tiết đơn hàng</h4>
+                <div className="items-list">
+                  {order.items && Array.isArray(order.items) && order.items.length > 0 ? 
+                    order.items.map((item, index) => (
+                      <div key={index} className="item-card">
+                        <div className="item-info">
+                          <div className="item-header">
+                            <span className="item-name">
+                              {item.productName || item.name || 'Sản phẩm'}
+                            </span>
+                            <span className="item-quantity">x{item.quantity || 1}</span>
+                          </div>
+                          
+                          {item.unitPrice && (
+                            <div className="item-price">
+                              {item.unitPrice.toLocaleString('vi-VN')} VNĐ/món
+                            </div>
+                          )}
+                          
+                          {item.toppings && Array.isArray(item.toppings) && item.toppings.length > 0 && (
+                            <div className="item-toppings">
+                              <span className="toppings-label">Topping:</span>
+                              {item.toppings.map((topping, tIndex) => (
+                                <span key={tIndex} className="topping-tag">
+                                  {topping.name || topping.toppingName || 'Topping'}
+                                  {topping.price && ` (+${topping.price.toLocaleString('vi-VN')}₫)`}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )) : (
+                      <div className="no-items">
+                        <p>Không có thông tin chi tiết sản phẩm</p>
+                      </div>
+                    )
+                  }
+                </div>
+              </div>
+
+              {/* Payment Button for Pending Orders */}
+              {order.status === 'Pending' && order.orderId && order.finalPrice && (
+                <div className="payment-section">
+                  <PaymentButton 
+                    orderId={order.orderId}
+                    amount={order.finalPrice}
+                    onSuccess={() => handlePaymentSuccess(order.orderId)}
+                    onError={handlePaymentError}
+                    className="payment-btn-full"
+                  />
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
+};
+
+// Helper functions
+const getStatusText = (status) => {
+  const statusMap = {
+    'Pending': 'Chờ thanh toán',
+    'Processing': 'Đang pha chế',
+    'Completed': 'Hoàn thành',
+    'Cancelled': 'Đã hủy'
+  };
+  return statusMap[status] || status;
 };
 
 export default Orders;

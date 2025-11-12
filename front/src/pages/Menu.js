@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Header from '../components/Header';
 import CheckoutModal from '../components/CheckoutModal';
 import ToppingModal from '../components/ToppingModal';
+import PaymentButton from '../components/PaymentButton';
 import cakeService from '../services/cakeService';
 import drinkService from '../services/drinkService';
 import toppingService from '../services/toppingService';
@@ -262,24 +263,51 @@ const Menu = () => {
   };
 
   // Handle successful order
-  const handleOrderSuccess = (orderInfo) => {
-    console.log('✅ Order completed successfully:', orderInfo);
+const handleOrderSuccess = (orderInfo) => {
+  console.log('✅ Order completed successfully:', orderInfo);
+  
+  try {
+    // ✅ Defensive programming - check orderInfo structure
+    if (!orderInfo) {
+      console.warn('orderInfo is undefined');
+      return;
+    }
     
     // Save order to history
     const orderHistory = JSON.parse(localStorage.getItem('orderHistory') || '[]');
-    orderHistory.unshift({
-      id: orderInfo.orderId,
-      totalPrice: orderInfo.totalPrice,
-      status: orderInfo.status,
-      items: orderInfo.items.length,
-      customerInfo: orderInfo.customerInfo,
+    
+    // ✅ Safely extract values với fallbacks
+    const orderRecord = {
+      id: orderInfo.orderId || orderInfo.id || `order_${Date.now()}`,
+      totalPrice: orderInfo.totalPrice || orderInfo.finalPrice || cartTotal || 0,
+      status: orderInfo.status || 'Pending',
+      items: orderInfo.items?.length || cartItems?.length || 0, // ✅ Safe access
+      customerInfo: orderInfo.customerInfo || null,
       createdAt: new Date().toISOString()
-    });
+    };
+    
+    console.log('Saving order record:', orderRecord);
+    
+    orderHistory.unshift(orderRecord);
     localStorage.setItem('orderHistory', JSON.stringify(orderHistory.slice(0, 10)));
+    
+    // ✅ Clear cart after successful order
+    clearCart();
     
     // Reset item quantities
     setItemQuantities({});
-  };
+    
+    console.log('✅ Order saved to history and cart cleared');
+    
+  } catch (error) {
+    console.error('❌ Error in handleOrderSuccess:', error);
+    console.error('OrderInfo received:', orderInfo);
+    
+    // Still clear cart even if saving fails
+    clearCart();
+    setItemQuantities({});
+  }
+};
 
   if (loading) {
     return (
@@ -403,14 +431,14 @@ const Menu = () => {
                   </div>
                 </div>
                 
-                {/* Nút thanh toán */}
-                <button 
-                  className="pay-btn" 
-                  onClick={handleCheckout}
-                  disabled={cartItems.length === 0}
-                >
-                  THANH TOÁN
-                </button>
+                {/* Payment Button */}
+                <PaymentButton
+                  cartItems={cartItems}
+                  cartTotal={cartTotal}
+                  isAuthenticated={isAuthenticated}
+                  className="pay-btn"
+                  onOrderSuccess={handleOrderSuccess}
+                />
               </div>
             )}
 

@@ -12,17 +12,50 @@ const CART_ACTIONS = {
   LOAD_CART: 'LOAD_CART'
 };
 
+// ✅ Helper function để normalize product ID
+const normalizeProductId = (item) => {
+  // Preserve original ID for reference
+  let originalId = item.id;
+  let cleanId = item.id;
+  
+  // Case 1: "drink_drink-001" -> "drink-001"
+  if (cleanId && cleanId.includes('_')) {
+    const parts = cleanId.split('_');
+    cleanId = parts[parts.length - 1];
+  }
+  
+  // Case 2: Extract from complex IDs
+  if (cleanId && cleanId.includes('-')) {
+    // Already in good format: "drink-001", "cake-001"
+  } else {
+    // Generate proper ID if needed
+    const type = item.type || item.category || 'item';
+    cleanId = `${type}-${Date.now()}`;
+  }
+  
+  console.log('Normalized ID:', { original: originalId, clean: cleanId });
+  
+  return {
+    ...item,
+    id: cleanId,           // Clean ID for cart operations
+    originalId: originalId, // Keep original for reference
+    productId: cleanId     // Explicit productId for API calls
+  };
+};
+
 // Cart Reducer
 const cartReducer = (state, action) => {
   switch (action.type) {
     case CART_ACTIONS.ADD_TO_CART: {
-      const existingItem = state.items.find(item => item.id === action.payload.id);
+      // ✅ Normalize item trước khi add
+      const normalizedItem = normalizeProductId(action.payload);
+      const existingItem = state.items.find(item => item.id === normalizedItem.id);
       
       if (existingItem) {
         return {
           ...state,
           items: state.items.map(item =>
-            item.id === action.payload.id
+            item.id === normalizedItem.id
               ? { ...item, quantity: item.quantity + 1 }
               : item
           )
@@ -30,7 +63,7 @@ const cartReducer = (state, action) => {
       } else {
         return {
           ...state,
-          items: [...state.items, { ...action.payload, quantity: 1 }]
+          items: [...state.items, { ...normalizedItem, quantity: 1 }]
         };
       }
     }
@@ -68,9 +101,11 @@ const cartReducer = (state, action) => {
     }
 
     case CART_ACTIONS.LOAD_CART: {
+      // ✅ Normalize loaded items
+      const normalizedItems = (action.payload || []).map(item => normalizeProductId(item));
       return {
         ...state,
-        items: action.payload || []
+        items: normalizedItems
       };
     }
 
@@ -112,6 +147,7 @@ export function CartProvider({ children }) {
 
   // Cart Actions
   const addToCart = (item) => {
+    console.log('Adding to cart:', item);
     dispatch({ type: CART_ACTIONS.ADD_TO_CART, payload: item });
   };
 
@@ -130,7 +166,7 @@ export function CartProvider({ children }) {
     dispatch({ type: CART_ACTIONS.CLEAR_CART });
   };
 
-  // Helper functions
+  // Helper functions (keep existing ones)
   const getItemPrice = (price) => {
     return typeof price === 'string' ? 
       parseInt(price.replace(/[₫,]/g, '')) : 

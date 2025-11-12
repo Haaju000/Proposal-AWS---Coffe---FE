@@ -1,160 +1,92 @@
-import axios from 'axios';
-import authService from './authService';
+const API_BASE_URL = 'http://localhost:5144/api';
 
-const API_BASE_URL = 'http://localhost:5144';
-
-// Create axios instance với interceptor để tự động thêm token
-const paymentAPI = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// Add auth token to requests
-paymentAPI.interceptors.request.use(
-  (config) => {
-    const token = authService.getIdToken();
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
+class PaymentService {
+  constructor() {
+    this.baseURL = API_BASE_URL;
   }
-);
 
-const paymentService = {
-  // POST /api/Payment/vnpay/create - Tạo payment URL cho VNPay
-  createVNPayPayment: async (orderId, returnUrl = null) => {
+  // Tạo payment URL cho VNPay - theo backend API format
+  async createVNPayPayment(paymentRequest) {
     try {
-      const defaultReturnUrl = `${window.location.origin}/payment-result`;
-      const paymentRequest = {
-        orderId: orderId,
-        returnUrl: returnUrl || defaultReturnUrl
-      };
+      // Get token với logic giống authService
+      const accessToken = localStorage.getItem('access_token');
+      const localToken = localStorage.getItem('local_token'); 
+      const idToken = localStorage.getItem('id_token');
       
-      console.log('💳 Creating VNPay payment request:', paymentRequest);
-      console.log('🔗 Request URL:', `${API_BASE_URL}/api/Payment/vnpay/create`);
-      console.log('🔑 ID Token:', authService.getIdToken() ? 'Present' : 'Missing');
+      const token = idToken || accessToken || localToken;
       
-      const response = await paymentAPI.post('/api/Payment/vnpay/create', paymentRequest);
-      console.log('✅ VNPay payment URL created successfully:', response.data);
+      if (!token) {
+        throw new Error('Vui lòng đăng nhập để thanh toán');
+      }
       
-      // Trả về URL để redirect
+      console.log('Creating VNPay payment:', paymentRequest);
+      
+      const response = await fetch(`${this.baseURL}/Payment/vnpay/create`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(paymentRequest)
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        console.error('VNPay payment creation failed:', data);
+        throw new Error(data.error || data.Error || 'Tạo payment URL thất bại');
+      }
+
+      console.log('VNPay payment created:', data);
+      
+      // Backend trả về VNPayPaymentResponse: { Success, PaymentUrl, Message }
       return {
-        paymentUrl: response.data,
-        orderId: orderId
+        success: data.Success || data.success || false,
+        paymentUrl: data.PaymentUrl || data.paymentUrl || '',
+        message: data.Message || data.message || ''
       };
     } catch (error) {
-      console.error('❌ Error creating VNPay payment:', error);
-      console.error('❌ Error details:', error.response?.data);
-      console.error('❌ Status code:', error.response?.status);
-      console.error('❌ Status text:', error.response?.statusText);
-      
-      if (error.response?.status === 401) {
-        throw new Error('Không có quyền truy cập. Vui lòng đăng nhập lại.');
-      } else if (error.response?.status === 400) {
-        throw new Error('Thông tin thanh toán không hợp lệ. Vui lòng kiểm tra lại.');
-      } else if (error.response?.status === 500) {
-        throw new Error('Lỗi server. Kiểm tra backend và kết nối VNPay.');
-      } else if (error.code === 'ECONNREFUSED') {
-        throw new Error('Không thể kết nối tới backend. Kiểm tra server có chạy không.');
-      }
-      
+      console.error('Create VNPay payment error:', error);
       throw error;
     }
-  },
-
-  // GET /api/Payment/vnpay/callback - Xử lý callback từ VNPay
-  handleVNPayCallback: async (callbackParams) => {
-    try {
-      console.log('🔄 Processing VNPay callback:', callbackParams);
-      
-      // Convert params object to query string
-      const queryString = new URLSearchParams(callbackParams).toString();
-      const response = await paymentAPI.get(`/api/Payment/vnpay/callback?${queryString}`);
-      
-      console.log('✅ VNPay callback processed successfully:', response.data);
-      return response.data;
-    } catch (error) {
-      console.error('❌ Error processing VNPay callback:', error);
-      throw error;
-    }
-  },
-
-  // GET /api/Payment/vnpay/ipn - Xử lý IPN (Instant Payment Notification) từ VNPay
-  handleVNPayIPN: async (ipnParams) => {
-    try {
-      console.log('🔔 Processing VNPay IPN:', ipnParams);
-      
-      const queryString = new URLSearchParams(ipnParams).toString();
-      const response = await paymentAPI.get(`/api/Payment/vnpay/ipn?${queryString}`);
-      
-      console.log('✅ VNPay IPN processed successfully:', response.data);
-      return response.data;
-    } catch (error) {
-      console.error('❌ Error processing VNPay IPN:', error);
-      throw error;
-    }
-  },
-
-  // GET /api/Payment/status/{orderId} - Kiểm tra trạng thái thanh toán
-  getPaymentStatus: async (orderId) => {
-    try {
-      console.log(`🔍 Checking payment status for order: ${orderId}`);
-      
-      const response = await paymentAPI.get(`/api/Payment/status/${orderId}`);
-      console.log('✅ Payment status retrieved successfully:', response.data);
-      return response.data;
-    } catch (error) {
-      console.error('❌ Error getting payment status:', error);
-      console.error('❌ Error details:', error.response?.data);
-      
-      if (error.response?.status === 404) {
-        throw new Error('Không tìm thấy thông tin thanh toán cho đơn hàng này.');
-      }
-      
-      throw error;
-    }
-  },
-
-  // Utility function để tạo payment request object (simplified for new API)
-  createPaymentRequest: (orderId, returnUrl = null) => {
-    const defaultReturnUrl = `${window.location.origin}/payment-result`;
-    
-    return {
-      orderId: orderId,
-      returnUrl: returnUrl || defaultReturnUrl
-    };
-  },
-
-  // Utility function để redirect tới VNPay
-  redirectToVNPay: (paymentUrl) => {
-    if (paymentUrl) {
-      console.log('🚀 Redirecting to VNPay:', paymentUrl);
-      window.location.href = paymentUrl;
-    } else {
-      throw new Error('Payment URL is empty');
-    }
-  },
-
-  // Utility function để parse callback parameters từ URL
-  parseCallbackParams: (urlSearchParams) => {
-    const params = {};
-    for (const [key, value] of urlSearchParams.entries()) {
-      params[key] = value;
-    }
-    return params;
-  },
-
-  // Utility function để validate callback response
-  validateCallbackResponse: (callbackResponse) => {
-    return callbackResponse && 
-           callbackResponse.success !== undefined &&
-           callbackResponse.orderId !== undefined;
   }
-};
 
+  // Kiểm tra trạng thái thanh toán
+  async getPaymentStatus(orderId) {
+    try {
+      const accessToken = localStorage.getItem('access_token');
+      const localToken = localStorage.getItem('local_token'); 
+      const idToken = localStorage.getItem('id_token');
+      
+      const token = idToken || accessToken || localToken;
+      
+      const response = await fetch(`${this.baseURL}/Payment/status/${orderId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Lấy trạng thái thanh toán thất bại');
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Get payment status error:', error);
+      throw error;
+    }
+  }
+
+  // Redirect đến VNPay
+  redirectToVNPay(paymentUrl) {
+    console.log('Redirecting to VNPay:', paymentUrl);
+    window.location.href = paymentUrl;
+  }
+}
+
+// Export instance
+const paymentService = new PaymentService();
+export { paymentService };
 export default paymentService;
