@@ -140,9 +140,25 @@ const orderService = {
         console.log('📋 No orders found in localStorage');
         return [];
       }
+
+      // ✅ Remove duplicates by orderId
+      const uniqueOrders = orderHistory.filter((item, index, self) => {
+        const orderId = typeof item === 'string' ? item : item.orderId;
+        return index === self.findIndex(t => {
+          const tOrderId = typeof t === 'string' ? t : t.orderId;
+          return tOrderId === orderId;
+        });
+      });
       
-      // Fetch details for each order
-      const orderPromises = orderHistory.map(async (orderItem) => {
+      console.log('📋 Unique orders after deduplication:', uniqueOrders);
+      
+      if (uniqueOrders.length !== orderHistory.length) {
+        console.log('🔧 Found duplicates, cleaning localStorage...');
+        localStorage.setItem('orderHistory', JSON.stringify(uniqueOrders));
+      }
+      
+      // Fetch details for each unique order
+      const orderPromises = uniqueOrders.map(async (orderItem) => {
         try {
           // orderItem có thể là string (orderId) hoặc object {orderId, ...}
           const orderId = typeof orderItem === 'string' ? orderItem : orderItem.orderId;

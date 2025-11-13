@@ -943,6 +943,19 @@ const OrdersContent = ({ showNotification }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeStatus, setActiveStatus] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [updating, setUpdating] = useState({});
+
+  // Helper function to get status text in Vietnamese
+  const getStatusText = (status) => {
+    const statusMap = {
+      'pending': 'Chờ thanh toán',
+      'processing': 'Đang xử lý', 
+      'completed': 'Hoàn thành',
+      'all': 'Tất cả'
+    };
+    return statusMap[status?.toLowerCase()] || status || 'Không xác định';
+  };
 
   useEffect(() => {
     fetchOrders();
@@ -951,14 +964,15 @@ const OrdersContent = ({ showNotification }) => {
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      // Note: You might need to create an admin-specific endpoint to get all orders
-      const response = await orderService.getUserOrders(token);
-      setOrders(response);
+      console.log('🚀 Fetching all orders for admin...');
+      // ✅ Use getAllOrders for admin (GET /api/Order)
+      const response = await orderService.getAllOrders();
+      console.log('✅ Admin orders loaded:', response);
+      setOrders(response || []);
       setError(null);
     } catch (err) {
-      console.error('Error fetching orders:', err);
-      setError('Không thể tải danh sách đơn hàng');
+      console.error('❌ Error fetching admin orders:', err);
+      setError('Không thể tải danh sách đơn hàng. Kiểm tra quyền Admin.');
     } finally {
       setLoading(false);
     }
@@ -966,140 +980,287 @@ const OrdersContent = ({ showNotification }) => {
 
   const handleUpdateOrderStatus = async (orderId, newStatus) => {
     try {
-      const token = localStorage.getItem('token');
-      await orderService.updateOrderStatus(orderId, newStatus, token);
-      showNotification('Thành công!', 'Trạng thái đơn hàng đã được cập nhật', 'success');
-      fetchOrders(); // Refresh the list
+      setUpdating(prev => ({ ...prev, [orderId]: true }));
+      console.log(`🔄 Updating order ${orderId} to status: ${newStatus}`);
+      
+      await orderService.updateOrderStatus(orderId, newStatus);
+      
+      showNotification('Thành công!', `Đơn hàng đã được chuyển sang "${getStatusText(newStatus)}"`, 'success');
+      
+      // ✅ Update local state immediately for better UX
+      setOrders(prevOrders => 
+        prevOrders.map(order => 
+          order.orderId === orderId 
+            ? { ...order, status: newStatus, completedAt: newStatus === 'Completed' ? new Date().toISOString() : order.completedAt }
+            : order
+        )
+      );
+      
+      console.log('✅ Order status updated successfully');
     } catch (error) {
-      console.error('Error updating order status:', error);
-      showNotification('Lỗi!', 'Không thể cập nhật trạng thái đơn hàng', 'error');
+      console.error('❌ Error updating order status:', error);
+      showNotification('Lỗi!', 'Không thể cập nhật trạng thái đơn hàng: ' + error.message, 'error');
+    } finally {
+      setUpdating(prev => ({ ...prev, [orderId]: false }));
     }
   };
 
-  const getStatusClass = (status) => {
-    switch (status?.toLowerCase()) {
-      case 'pending': return 'pending';
-      case 'processing': return 'processing';
-      case 'completed': return 'completed';
-      case 'cancelled': return 'cancelled';
-      default: return 'pending';
-    }
+  // Computed properties
+  const orderCounts = {
+    all: orders.length,
+    pending: orders.filter(o => o.status?.toLowerCase() === 'pending').length,
+    processing: orders.filter(o => o.status?.toLowerCase() === 'processing').length,
+    completed: orders.filter(o => o.status?.toLowerCase() === 'completed').length
   };
 
-  const getStatusText = (status) => {
-    switch (status?.toLowerCase()) {
-      case 'pending': return 'Chờ xử lý';
-      case 'processing': return 'Đang xử lý';
-      case 'completed': return 'Hoàn thành';
-      case 'cancelled': return 'Đã hủy';
-      default: return status;
-    }
-  };
-
-  const filteredOrders = activeStatus === 'all' 
-    ? orders 
-    : orders.filter(order => order.status?.toLowerCase() === activeStatus);
+  const filteredOrders = orders.filter(order => {
+    const matchesStatus = activeStatus === 'all' || order.status?.toLowerCase() === activeStatus;
+    const matchesSearch = searchTerm === '' || 
+      order.orderId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.userId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.appliedVoucherCode?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.items?.some(item => 
+        item.productName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.name?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    return matchesStatus && matchesSearch;
+  });
 
   if (loading) {
-    return <div className="loading">Đang tải đơn hàng...</div>;
+    return (
+      <div className="orders-content">
+        <div className="loading-container">
+          <div className="coffee-loading">☕</div>
+          <p>Đang tải danh sách đơn hàng...</p>
+        </div>
+      </div>
+    );
   }
 
   if (error) {
-    return <div className="error">{error}</div>;
+    return (
+      <div className="orders-content">
+        <div className="error-container">
+          <div className="error-icon">⚠️</div>
+          <h3>Không thể tải đơn hàng</h3>
+          <p>{error}</p>
+          <button onClick={fetchOrders} className="retry-btn">
+            🔄 Thử lại
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="orders-content">
       <div className="content-header">
-        <h2>Quản lý đơn hàng</h2>
-        <div className="filter-tabs">
-          <button 
-            className={`tab ${activeStatus === 'all' ? 'active' : ''}`}
-            onClick={() => setActiveStatus('all')}
-          >
-            Tất cả ({orders.length})
-          </button>
-          <button 
-            className={`tab ${activeStatus === 'pending' ? 'active' : ''}`}
-            onClick={() => setActiveStatus('pending')}
-          >
-            Chờ xử lý ({orders.filter(o => o.status?.toLowerCase() === 'pending').length})
-          </button>
-          <button 
-            className={`tab ${activeStatus === 'processing' ? 'active' : ''}`}
-            onClick={() => setActiveStatus('processing')}
-          >
-            Đang xử lý ({orders.filter(o => o.status?.toLowerCase() === 'processing').length})
-          </button>
-          <button 
-            className={`tab ${activeStatus === 'completed' ? 'active' : ''}`}
-            onClick={() => setActiveStatus('completed')}
-          >
-            Hoàn thành ({orders.filter(o => o.status?.toLowerCase() === 'completed').length})
+        <div className="header-title">
+          <FiShoppingBag size={24} />
+          <h2>Quản lý đơn hàng</h2>
+        </div>
+        
+        {/* ✅ Search Bar */}
+        <div className="search-section">
+          <div className="search-box">
+            <FiSearch size={16} />
+            <input
+              type="text"
+              placeholder="Tìm theo mã đơn hàng hoặc ID khách hàng..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <button onClick={fetchOrders} className="refresh-btn">
+            <FiGlobe size={16} />
+            Làm mới
           </button>
         </div>
       </div>
-      
-      <div className="orders-table">
-        <table>
-          <thead>
-            <tr>
-              <th>Mã đơn</th>
-              <th>Khách hàng</th>
-              <th>Sản phẩm</th>
-              <th>Tổng tiền</th>
-              <th>Trạng thái</th>
-              <th>Ngày tạo</th>
-              <th>Thao tác</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredOrders.map((order) => (
-              <tr key={order.id}>
-                <td>#{order.id}</td>
-                <td>{order.customerName || 'N/A'}</td>
-                <td>
-                  <div className="order-items">
-                    {order.items?.map((item, index) => (
-                      <div key={index} className="order-item">
-                        {item.name} x{item.quantity}
-                      </div>
-                    )) || 'N/A'}
-                  </div>
-                </td>
-                <td>₫{order.totalAmount?.toLocaleString()}</td>
-                <td>
-                  <span className={`status ${getStatusClass(order.status)}`}>
-                    {getStatusText(order.status)}
-                  </span>
-                </td>
-                <td>{new Date(order.createdAt).toLocaleDateString('vi-VN')}</td>
-                <td>
-                  <div className="order-actions">
-                    <select
-                      value={order.status}
-                      onChange={(e) => handleUpdateOrderStatus(order.id, e.target.value)}
-                      className="status-select"
-                    >
-                      <option value="Pending">Chờ xử lý</option>
-                      <option value="Processing">Đang xử lý</option>
-                      <option value="Completed">Hoàn thành</option>
-                      <option value="Cancelled">Đã hủy</option>
-                    </select>
-                    <button className="action-btn view-btn">
-                      👁️ Xem
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        
-        {filteredOrders.length === 0 && (
-          <div className="no-data">
-            <p>Không có đơn hàng nào</p>
+
+      {/* ✅ Status Filter Tabs */}
+      <div className="filter-tabs">
+        <button 
+          className={`tab ${activeStatus === 'all' ? 'active' : ''}`}
+          onClick={() => setActiveStatus('all')}
+        >
+          <span className="tab-text">Tất cả</span>
+          <span className="tab-count">{orderCounts.all}</span>
+          </button>
+        <button 
+          className={`tab ${activeStatus === 'pending' ? 'active' : ''} pending-tab`}
+          onClick={() => setActiveStatus('pending')}
+        >
+          <span className="tab-text">Chờ thanh toán</span>
+          <span className="tab-count">{orderCounts.pending}</span>
+        </button>
+        <button 
+          className={`tab ${activeStatus === 'processing' ? 'active' : ''} processing-tab`}
+          onClick={() => setActiveStatus('processing')}
+        >
+          <span className="tab-text">Đang xử lý</span>
+          <span className="tab-count">{orderCounts.processing}</span>
+        </button>
+        <button 
+          className={`tab ${activeStatus === 'completed' ? 'active' : ''} completed-tab`}
+          onClick={() => setActiveStatus('completed')}
+        >
+          <span className="tab-text">Hoàn thành</span>
+          <span className="tab-count">{orderCounts.completed}</span>
+        </button>
+      </div>
+
+      {/* ✅ Orders Grid */}
+      <div className="orders-grid">
+        {filteredOrders.length === 0 ? (
+          <div className="no-orders">
+            <div className="no-orders-icon">📋</div>
+            <h3>Không có đơn hàng nào</h3>
+            <p>
+              {searchTerm ? `Không tìm thấy đơn hàng với từ khóa "${searchTerm}"` : 
+               activeStatus === 'all' ? 'Chưa có đơn hàng nào trong hệ thống' :
+               `Không có đơn hàng nào ở trạng thái "${getStatusText(activeStatus)}"`}
+            </p>
           </div>
+        ) : (
+          filteredOrders.map((order) => (
+            <div key={order.orderId} className="order-card">
+              {/* Order Header */}
+              <div className="order-header">
+                <div className="order-info">
+                  <h3 className="order-id">
+                    #{order.orderId ? order.orderId.slice(-8).toUpperCase() : 'N/A'}
+                  </h3>
+                  <p className="order-date">
+                    {order.createdAt ? new Date(order.createdAt).toLocaleDateString('vi-VN', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    }) : 'N/A'}
+                  </p>
+                </div>
+                <div className={`status-badge status-${order.status?.toLowerCase() || 'unknown'}`}>
+                  <span className="status-dot"></span>
+                  {getStatusText(order.status)}
+                </div>
+              </div>
+
+              {/* Order Details */}
+              <div className="order-details">
+                {/* Customer Info */}
+                {order.userId && (
+                  <div className="detail-row">
+                    <span className="detail-label">👤 Khách hàng:</span>
+                    <span className="detail-value">{order.userId.slice(-8).toUpperCase()}</span>
+                  </div>
+                )}
+
+                {/* Price Information */}
+                <div className="price-section">
+                  {order.totalPrice && order.totalPrice !== order.finalPrice && (
+                    <div className="detail-row">
+                      <span className="detail-label">💰 Tổng tiền gốc:</span>
+                      <span className="detail-value original-price">
+                        {order.totalPrice.toLocaleString('vi-VN')} VNĐ
+                      </span>
+                    </div>
+                  )}
+                  
+                  {order.appliedVoucherCode && (
+                    <div className="detail-row voucher-row">
+                      <span className="detail-label">🎫 Voucher:</span>
+                      <span className="detail-value voucher-code">{order.appliedVoucherCode}</span>
+                    </div>
+                  )}
+                  
+                  <div className="detail-row final-price-row">
+                    <span className="detail-label">💳 Thành tiền:</span>
+                    <span className="detail-value final-price">
+                      {order.finalPrice ? order.finalPrice.toLocaleString('vi-VN') : '0'} VNĐ
+                    </span>
+                  </div>
+                </div>
+
+                {/* Completion Time */}
+                {order.completedAt && (
+                  <div className="detail-row">
+                    <span className="detail-label">✅ Hoàn thành:</span>
+                    <span className="detail-value">
+                      {new Date(order.completedAt).toLocaleDateString('vi-VN', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Items List */}
+              <div className="items-section">
+                <h4 className="items-title">🛍️ Chi tiết đơn hàng</h4>
+                <div className="items-list">
+                  {order.items && Array.isArray(order.items) && order.items.length > 0 ? 
+                    order.items.map((item, index) => (
+                      <div key={index} className="item-card">
+                        <div className="item-info">
+                          <div className="item-header">
+                            <span className="item-name">
+                              {item.productName || item.name || 'Sản phẩm'}
+                            </span>
+                            <span className="item-quantity">x{item.quantity || 1}</span>
+                          </div>
+                          
+                          {item.unitPrice && (
+                            <div className="item-price">
+                              {item.unitPrice.toLocaleString('vi-VN')} VNĐ/món
+                            </div>
+                          )}
+                          
+                          {item.toppings && Array.isArray(item.toppings) && item.toppings.length > 0 && (
+                            <div className="item-toppings">
+                              <span className="toppings-label">Topping:</span>
+                              {item.toppings.map((topping, tIndex) => (
+                                <span key={tIndex} className="topping-tag">
+                                  {topping.name || topping.toppingName || 'Topping'}
+                                  {topping.price && ` (+${topping.price.toLocaleString('vi-VN')}₫)`}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )) : (
+                      <div className="no-items">
+                        <p>Không có thông tin chi tiết sản phẩm</p>
+                      </div>
+                    )
+                  }
+                </div>
+              </div>
+
+              {/* Admin Actions - Only show for Processing orders */}
+              {order.status === 'Processing' && (
+                <div className="admin-actions">
+                  <button 
+                    className="action-btn complete-btn"
+                    onClick={() => handleUpdateOrderStatus(order.orderId, 'Completed')}
+                    disabled={updating[order.orderId]}
+                  >
+                    {updating[order.orderId] ? (
+                      <>⏳ Đang cập nhật...</>
+                    ) : (
+                      <>✅ Hoàn thành đơn hàng</>
+                    )}
+                  </button>
+                </div>
+              )}
+            </div>
+          ))
         )}
       </div>
     </div>

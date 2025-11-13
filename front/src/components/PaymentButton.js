@@ -134,10 +134,10 @@ const PaymentButton = ({
 
       console.log('✅ Order created with ID:', newOrderId);
 
-      // Create VNPay payment
+      // Create VNPay payment - Backend will handle callback and redirect to frontend
       const paymentRequest = {
-        orderId: newOrderId,
-        returnUrl: `${window.location.origin}/payment-result`
+        orderId: newOrderId
+        // No returnUrl needed - backend will auto-redirect to frontend
       };
       
       console.log('🚀 Creating VNPay payment:', paymentRequest);
@@ -151,7 +151,7 @@ const PaymentButton = ({
         localStorage.setItem('pendingPaymentOrderId', newOrderId);
         localStorage.setItem('pendingPaymentAmount', cartTotal.toString());
         
-        // ✅ Save to order history for getUserOrders
+        // ✅ Save to order history for getUserOrders (prevent duplicates)
         const orderHistory = JSON.parse(localStorage.getItem('orderHistory') || '[]');
         const orderHistoryItem = {
           orderId: newOrderId,
@@ -160,8 +160,15 @@ const PaymentButton = ({
           status: 'Pending' // Will be updated after payment
         };
         
-        // Add to beginning of array (newest first)
-        orderHistory.unshift(orderHistoryItem);
+        // ✅ Check if order already exists to prevent duplicates
+        const existingIndex = orderHistory.findIndex(o => o.orderId === newOrderId);
+        if (existingIndex === -1) {
+          // Add to beginning of array (newest first)
+          orderHistory.unshift(orderHistoryItem);
+          console.log('✅ New order added to history:', orderHistoryItem);
+        } else {
+          console.log('⚠️ Order already exists in history, skipping duplicate');
+        }
         
         // Keep only last 50 orders to prevent localStorage bloat
         if (orderHistory.length > 50) {
@@ -239,8 +246,8 @@ const PaymentButton = ({
                 setLoading(true);
 
                 const paymentRequest = {
-                    orderId: orderId,
-                    returnUrl: `${window.location.origin}/payment-result`
+                    orderId: orderId
+                    // No returnUrl needed - backend will auto-redirect to frontend
                 };
 
                 const response = await paymentService.createVNPayPayment(paymentRequest);

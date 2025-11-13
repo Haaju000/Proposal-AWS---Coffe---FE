@@ -41,21 +41,86 @@ const PaymentResult = () => {
                 console.log(`${key}: ${value}`);
             }
             
-            const orderId = urlParams.get('orderId') || urlParams.get('vnp_TxnRef');
+            // ✅ Priority 1: Handle backend redirect params (NEW FLOW)
+            const orderId = urlParams.get('orderId');
+            const status = urlParams.get('status');
+            const amount = urlParams.get('amount');
+            const transactionId = urlParams.get('transactionId');
+            const bankCode = urlParams.get('bankCode');
+            const payDate = urlParams.get('payDate');
+            const message = urlParams.get('message');
+
+            console.log('Backend redirect params:', {
+                orderId, status, amount, transactionId, bankCode, payDate, message
+            });
+
+            // ✅ Check if we have backend redirect params
+            if (orderId && status) {
+                console.log('✅ Processing backend redirect result');
+                
+                if (status === 'success') {
+                    setPaymentStatus('success');
+                    setPaymentDetails({
+                        orderId: orderId,
+                        transactionRef: transactionId || orderId,
+                        amount: amount ? parseFloat(amount) : 0,
+                        paymentDate: new Date(),
+                        status: 'Processing', // Backend updated status
+                        message: message || 'Thanh toán thành công',
+                        bankCode: bankCode || '',
+                        payDate: payDate || ''
+                    });
+
+                    // ✅ Update orderHistory với status mới từ backend
+                    try {
+                        const orderHistory = JSON.parse(localStorage.getItem('orderHistory') || '[]');
+                        const orderIndex = orderHistory.findIndex(o => o.orderId === orderId);
+                        
+                        if (orderIndex !== -1) {
+                            orderHistory[orderIndex].status = 'Processing';
+                            orderHistory[orderIndex].paymentDate = new Date().toISOString();
+                            localStorage.setItem('orderHistory', JSON.stringify(orderHistory));
+                            console.log('✅ Updated order status to Processing via backend redirect');
+                        }
+                    } catch (error) {
+                        console.warn('Warning: Could not update order history:', error);
+                    }
+
+                    // ✅ Clear pending payment data
+                    localStorage.removeItem('pendingPaymentOrderId');
+                    localStorage.removeItem('pendingPaymentAmount');
+                    
+                } else if (status === 'failed') {
+                    setPaymentStatus('failed');
+                    setPaymentDetails({
+                        orderId: orderId,
+                        message: message || 'Thanh toán thất bại'
+                    });
+                } else {
+                    setPaymentStatus('error');
+                    setPaymentDetails({
+                        orderId: orderId,
+                        message: message || 'Có lỗi xảy ra'
+                    });
+                }
+                
+                setLoading(false);
+                return;
+            }
+
+            // ✅ Priority 2: Fallback to VNPay direct params (OLD FLOW)
+            console.log('⚠️ No backend redirect params, trying VNPay direct params...');
+            
+            const vnp_OrderId = urlParams.get('vnp_TxnRef');
             const vnp_ResponseCode = urlParams.get('vnp_ResponseCode');
-            const vnp_TxnRef = urlParams.get('vnp_TxnRef');
             const vnp_Amount = urlParams.get('vnp_Amount');
             const vnp_PayDate = urlParams.get('vnp_PayDate');
 
-            console.log('Extracted values:', {
-                orderId,
-                vnp_ResponseCode,
-                vnp_TxnRef,
-                vnp_Amount,
-                vnp_PayDate
+            console.log('VNPay direct params:', {
+                vnp_OrderId, vnp_ResponseCode, vnp_Amount, vnp_PayDate
             });
 
-            if (!vnp_ResponseCode || !vnp_TxnRef) {
+            if (!vnp_ResponseCode || !vnp_OrderId) {
                 console.log('Missing required parameters, showing error');
                 setPaymentStatus('error');
                 setLoading(false);
@@ -64,11 +129,11 @@ const PaymentResult = () => {
 
             try {
                 if (vnp_ResponseCode === '00') {
-                    // Thanh toán thành công
+                    // Thanh toán thành công (VNPay direct - fallback)
                     setPaymentStatus('success');
                     setPaymentDetails({
-                        orderId: orderId,
-                        transactionRef: vnp_TxnRef,
+                        orderId: vnp_OrderId,
+                        transactionRef: vnp_OrderId,
                         amount: vnp_Amount ? parseInt(vnp_Amount) / 100 : 0,
                         paymentDate: vnp_PayDate ? 
                             new Date(
@@ -82,34 +147,69 @@ const PaymentResult = () => {
                         status: 'Paid'
                     });
 
-                    // Gọi API để cập nhật trạng thái đơn hàng
+                    // ✅ Verify payment and get actual order status from backend
                     try {
-                        await paymentService.getPaymentStatus(orderId, vnp_TxnRef);
+                        console.log('🔍 Verifying payment status with backend...');
+                        const backendStatus = await paymentService.getPaymentStatus(orderId, transactionId || orderId);
+                        console.log('✅ Backend payment verification:', backendStatus);
+                        
+                        // If backend returns order status, use it
+                        if (backendStatus?.order?.status) {
+                            setPaymentDetails(prev => ({
+                                ...prev,
+                                backendStatus: backendStatus.order.status
+                            }));
+                        }
                     } catch (error) {
-                        console.warn('Warning: Could not update order status:', error);
+                        console.warn('⚠️ Could not verify payment status with backend:', error);
                     }
 
-                    // ✅ Update orderHistory status to completed
+                    // ✅ Update orderHistory with actual backend status if available
                     try {
                         const orderHistory = JSON.parse(localStorage.getItem('orderHistory') || '[]');
                         const orderIndex = orderHistory.findIndex(o => o.orderId === orderId);
                         
                         if (orderIndex !== -1) {
-                            orderHistory[orderIndex].status = 'Processing'; // or 'Completed'
+                            // Try to get real status from backend first
+                            let newStatus = 'Processing'; // Default assumption after successful payment
+                            
+                            try {
+                                console.log('📋 Fetching actual order status from backend...');
+                                const orderResponse = await fetch(`http://localhost:5144/api/Order/${orderId}`, {
+                                    headers: {
+                                        'Authorization': `Bearer ${localStorage.getItem('id_token') || localStorage.getItem('access_token') || localStorage.getItem('local_token')}`
+                                    }
+                                });
+                                
+                                if (orderResponse.ok) {
+                                    const orderData = await orderResponse.json();
+                                    newStatus = orderData.status || 'Processing';
+                                    console.log('✅ Real order status from backend:', newStatus);
+                                } else {
+                                    console.warn('⚠️ Could not fetch order status, using default');
+                                }
+                            } catch (fetchError) {
+                                console.warn('⚠️ Error fetching order status:', fetchError);
+                            }
+                            
+                            orderHistory[orderIndex].status = newStatus;
                             orderHistory[orderIndex].paymentDate = new Date().toISOString();
                             localStorage.setItem('orderHistory', JSON.stringify(orderHistory));
-                            console.log('✅ Updated order status in history:', orderHistory[orderIndex]);
+                            console.log('✅ Updated order status in localStorage:', orderHistory[orderIndex]);
+                        } else {
+                            console.warn('⚠️ Order not found in localStorage history');
                         }
                     } catch (error) {
-                        console.warn('Warning: Could not update order history:', error);
+                        console.warn('⚠️ Could not update order history:', error);
                     }
                 } else {
-                    // Thanh toán thất bại
+                    // Thanh toán thất bại (VNPay direct - fallback)
                     setPaymentStatus('failed');
                     setPaymentDetails({
-                        orderId: orderId,
-                        transactionRef: vnp_TxnRef,
-                        responseCode: vnp_ResponseCode
+                        orderId: vnp_OrderId,
+                        transactionRef: vnp_OrderId,
+                        responseCode: vnp_ResponseCode,
+                        message: getErrorMessage(vnp_ResponseCode)
                     });
                 }
             } catch (error) {
