@@ -148,7 +148,11 @@ const authService = {
       console.log('📝 Register data:', { username, role });
       
       // Gửi dưới dạng query parameters
-      const response = await apiClient.post(`/Auth/register?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}&role=${encodeURIComponent(role)}`);
+      const response = await apiClient.post('/Auth/register', { 
+            username: username, 
+            password: password, 
+            role: role // Đảm bảo role được gửi là string
+        });
       
       console.log('✅ Register response:', response.data);
       
@@ -210,7 +214,10 @@ const authService = {
   // Confirm sign up - Xác thực email với Cognito
   confirmSignUp: async (username, confirmationCode) => {
     try {
-      const response = await apiClient.post(`/Auth/confirm?username=${encodeURIComponent(username)}&confirmationCode=${encodeURIComponent(confirmationCode)}`);
+      const response = await apiClient.post(`/Auth/confirm`, {
+      username: username, // Gửi trong body
+      confirmationCode: confirmationCode // Gửi trong body
+    });
       
       return {
         success: true,
@@ -230,7 +237,9 @@ const authService = {
           errorMessage = 'Tài khoản đã được xác thực hoặc không tồn tại.';
         }
       }
-      
+      if (errorMessage === 'Mã xác thực không đúng hoặc đã hết hạn.' && error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+    }
       throw { message: errorMessage };
     }
   },
@@ -238,8 +247,9 @@ const authService = {
   // Resend confirmation code
   resendConfirmationCode: async (username) => {
     try {
-      const response = await apiClient.post(`/Auth/resend?username=${encodeURIComponent(username)}`);
-      
+      const response = await apiClient.post(`/Auth/resend`, { 
+            username: username
+      });
       return {
         success: true,
         message: 'Mã xác thực mới đã được gửi đến email của bạn.'
