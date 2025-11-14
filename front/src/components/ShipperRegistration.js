@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import ReactDOM from 'react-dom';
 import shipperRegistrationService from '../services/shipperRegistrationService';
 import authService from '../services/authService';
 import '../css/ShipperRegistration.css';
@@ -83,8 +84,6 @@ const ShipperRegistration = ({ isOpen, onClose }) => {
     setErrors({});
     onClose();
   };
-
-  if (!isOpen) return null;
 
   return (
     <div className="shipper-registration-overlay" onClick={handleClose}>
@@ -239,4 +238,11 @@ const ShipperRegistration = ({ isOpen, onClose }) => {
   );
 };
 
-export default ShipperRegistration;
+export default (props) => {
+  const { isOpen } = props;
+  if (!isOpen) return null;
+  return ReactDOM.createPortal(
+    <ShipperRegistration {...props} />,
+    document.body
+  );
+};
