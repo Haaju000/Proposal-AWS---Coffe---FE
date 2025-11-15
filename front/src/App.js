@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { CartProvider } from './contexts/CartContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 import './css/globals.css';
 import './App.css';
 
@@ -28,6 +29,7 @@ import Profile from './pages/Profile';
 import Orders from './pages/Orders';
 import Loyalty from './pages/Loyalty';
 import PaymentResult from './pages/PaymentResult';
+import Notifications from './pages/Notifications';
 
 // Import components
 import ProtectedRoute from './components/ProtectedRoute';
@@ -53,9 +55,10 @@ function App() {
   return (
     <AuthProvider>
       <CartProvider>
-        <Router>
-          <ScrollToTop />
-          <Routes>
+        <NotificationProvider>
+          <Router>
+            <ScrollToTop />
+            <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/menu" element={<Menu />} />
           <Route path="/about" element={<About />} />
@@ -103,9 +106,18 @@ function App() {
               </ProtectedRoute>
             } 
           />
+          <Route 
+            path="/notifications" 
+            element={
+              <ProtectedRoute>
+                <Notifications />
+              </ProtectedRoute>
+            } 
+          />
           <Route path="/payment-result" element={<PaymentResult />} />
-        </Routes>
-        </Router>
+            </Routes>
+          </Router>
+        </NotificationProvider>
       </CartProvider>
     </AuthProvider>
   );

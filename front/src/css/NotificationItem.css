@@ -1,0 +1,257 @@
+/* Notification Item Styles */
+.notification-item {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  border-bottom: 1px solid #f0f0f0;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  background: white;
+}
+
+.notification-item:hover {
+  background: #f8f9fa;
+  transform: translateX(2px);
+}
+
+.notification-item:last-child {
+  border-bottom: none;
+}
+
+/* Unread indicator dot */
+.unread-indicator {
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 8px;
+  height: 8px;
+  background: #ff4757;
+  border-radius: 50%;
+  animation: pulse-dot 2s infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: translateY(-50%) scale(1); }
+  50% { opacity: 0.7; transform: translateY(-50%) scale(1.2); }
+}
+
+/* Notification states */
+.notification-item.unread {
+  background: #f8f9ff;
+  border-left: 3px solid #3742fa;
+}
+
+.notification-item.read {
+  opacity: 0.85;
+}
+
+/* Type-specific styling */
+.notification-item.notification-success {
+  border-left-color: #2ed573;
+}
+
+.notification-item.notification-info {
+  border-left-color: #1e90ff;
+}
+
+.notification-item.notification-warning {
+  border-left-color: #ffa502;
+}
+
+.notification-item.notification-danger {
+  border-left-color: #ff4757;
+}
+
+/* Icon styling */
+.notification-icon {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f1f2f6;
+  border-radius: 50%;
+  font-size: 18px;
+  transition: all 0.3s ease;
+}
+
+.notification-item:hover .notification-icon {
+  transform: scale(1.1);
+}
+
+.notification-item.notification-success .notification-icon {
+  background: #e8f5e8;
+}
+
+.notification-item.notification-info .notification-icon {
+  background: #e3f2fd;
+}
+
+.notification-item.notification-warning .notification-icon {
+  background: #fff3e0;
+}
+
+.notification-item.notification-danger .notification-icon {
+  background: #ffebee;
+}
+
+/* Content area */
+.notification-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.notification-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 6px;
+  gap: 12px;
+}
+
+.notification-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #2f3542;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.notification-time {
+  font-size: 12px;
+  color: #747d8c;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.notification-message {
+  font-size: 13px;
+  color: #57606f;
+  line-height: 1.5;
+  margin: 0 0 8px 0;
+}
+
+/* Data tags */
+.notification-data {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.data-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: #f1f2f6;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #57606f;
+}
+
+.data-tag.order-tag {
+  background: #e3f2fd;
+  color: #1565c0;
+}
+
+.data-tag.price-tag {
+  background: #e8f5e8;
+  color: #2e7d32;
+}
+
+.data-tag.points-tag {
+  background: #fff3e0;
+  color: #f57c00;
+}
+
+.data-tag.shipper-tag {
+  background: #f3e5f5;
+  color: #7b1fa2;
+}
+
+/* Action buttons */
+.notification-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.notification-item:hover .notification-actions {
+  opacity: 1;
+}
+
+.action-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: #f1f2f6;
+  color: #57606f;
+}
+
+.action-btn:hover {
+  transform: scale(1.1);
+}
+
+.read-btn:hover {
+  background: #e8f5e8;
+  color: #2e7d32;
+}
+
+.delete-btn:hover {
+  background: #ffebee;
+  color: #d32f2f;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .notification-item {
+    padding: 12px;
+    gap: 10px;
+  }
+  
+  .notification-icon {
+    width: 36px;
+    height: 36px;
+    font-size: 16px;
+  }
+  
+  .notification-title {
+    font-size: 13px;
+  }
+  
+  .notification-message {
+    font-size: 12px;
+  }
+  
+  .notification-time {
+    font-size: 11px;
+  }
+  
+  .data-tag {
+    font-size: 10px;
+    padding: 3px 6px;
+  }
+  
+  .notification-actions {
+    opacity: 1; /* Always show on mobile */
+  }
+  
+  .action-btn {
+    width: 24px;
+    height: 24px;
+  }
+}

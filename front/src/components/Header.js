@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
 import ShipperRegistration from './ShipperRegistration';
+import NotificationDropdown from './NotificationDropdown';
 import '../css/Header.css';
 
 const Header = () => {
@@ -86,6 +87,9 @@ const Header = () => {
             <span className="shipper-icon">🚚</span>
             <span className="shipper-text">Trở thành Shipper</span>
           </button>
+
+          {/* Notification Bell - Only show for authenticated users */}
+          {isAuthenticated && user && <NotificationDropdown />}
 
           {/* Cart Menu */}
           <div className="cart-menu" ref={cartMenuRef}>

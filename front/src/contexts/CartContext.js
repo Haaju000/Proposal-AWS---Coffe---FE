@@ -14,32 +14,20 @@ const CART_ACTIONS = {
 
 // ✅ Helper function để normalize product ID
 const normalizeProductId = (item) => {
-  // Preserve original ID for reference
-  let originalId = item.id;
-  let cleanId = item.id;
-  
-  // Case 1: "drink_drink-001" -> "drink-001"
-  if (cleanId && cleanId.includes('_')) {
-    const parts = cleanId.split('_');
-    cleanId = parts[parts.length - 1];
-  }
-  
-  // Case 2: Extract from complex IDs
-  if (cleanId && cleanId.includes('-')) {
-    // Already in good format: "drink-001", "cake-001"
-  } else {
-    // Generate proper ID if needed
-    const type = item.type || item.category || 'item';
-    cleanId = `${type}-${Date.now()}`;
-  }
-  
-  console.log('Normalized ID:', { original: originalId, clean: cleanId });
+  // Menu.js đã gửi UUID thuần từ API, giữ nguyên
+  console.log('🛒 Cart item received:', { 
+    id: item.id, 
+    originalId: item.originalId,
+    itemName: item.name,
+    type: item.type
+  });
   
   return {
     ...item,
-    id: cleanId,           // Clean ID for cart operations
-    originalId: originalId, // Keep original for reference
-    productId: cleanId     // Explicit productId for API calls
+    // Giữ nguyên tất cả ID từ Menu.js
+    id: item.id,                    // UUID từ API (đã clean)
+    originalId: item.originalId,    // UUID từ API (backup)
+    productId: item.originalId || item.id  // UUID cho backend
   };
 };
 

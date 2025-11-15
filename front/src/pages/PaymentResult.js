@@ -41,37 +41,37 @@ const PaymentResult = () => {
                 console.log(`${key}: ${value}`);
             }
             
-            // ✅ Priority 1: Handle backend redirect params (NEW FLOW)
-            const orderId = urlParams.get('orderId');
-            const status = urlParams.get('status');
-            const amount = urlParams.get('amount');
-            const transactionId = urlParams.get('transactionId');
-            const bankCode = urlParams.get('bankCode');
-            const payDate = urlParams.get('payDate');
-            const message = urlParams.get('message');
-
-            console.log('Backend redirect params:', {
-                orderId, status, amount, transactionId, bankCode, payDate, message
+            // Detect payment method from URL
+            const isVNPayCallback = window.location.pathname.includes('/payment-result') && 
+                                   (urlParams.has('vnp_ResponseCode') || urlParams.has('vnp_TxnRef'));
+            const isMoMoSuccess = window.location.pathname.includes('/payment-success');
+            const isMoMoFailed = window.location.pathname.includes('/payment-failed');
+            
+            console.log('Payment method detection:', {
+                isVNPayCallback, isMoMoSuccess, isMoMoFailed
             });
 
-            // ✅ Check if we have backend redirect params
-            if (orderId && status) {
-                console.log('✅ Processing backend redirect result');
+            // ✅ Priority 1: Handle MoMo Success Redirect
+            if (isMoMoSuccess) {
+                console.log('✅ Processing MoMo success redirect');
                 
-                if (status === 'success') {
+                const orderId = urlParams.get('orderId');
+                const amount = urlParams.get('amount');
+                const transactionId = urlParams.get('transactionId');
+                
+                if (orderId) {
                     setPaymentStatus('success');
                     setPaymentDetails({
                         orderId: orderId,
                         transactionRef: transactionId || orderId,
                         amount: amount ? parseFloat(amount) : 0,
                         paymentDate: new Date(),
-                        status: 'Processing', // Backend updated status
-                        message: message || 'Thanh toán thành công',
-                        bankCode: bankCode || '',
-                        payDate: payDate || ''
+                        status: 'Processing',
+                        message: 'Thanh toán MoMo thành công',
+                        paymentMethod: 'MoMo'
                     });
 
-                    // ✅ Update orderHistory với status mới từ backend
+                    // Update order history
                     try {
                         const orderHistory = JSON.parse(localStorage.getItem('orderHistory') || '[]');
                         const orderIndex = orderHistory.findIndex(o => o.orderId === orderId);
@@ -80,27 +80,153 @@ const PaymentResult = () => {
                             orderHistory[orderIndex].status = 'Processing';
                             orderHistory[orderIndex].paymentDate = new Date().toISOString();
                             localStorage.setItem('orderHistory', JSON.stringify(orderHistory));
-                            console.log('✅ Updated order status to Processing via backend redirect');
+                            console.log('✅ Updated order status to Processing via MoMo redirect');
                         }
                     } catch (error) {
                         console.warn('Warning: Could not update order history:', error);
                     }
-
-                    // ✅ Clear pending payment data
-                    localStorage.removeItem('pendingPaymentOrderId');
-                    localStorage.removeItem('pendingPaymentAmount');
                     
-                } else if (status === 'failed') {
+                    setLoading(false);
+                    return;
+                }
+            }
+
+            // ✅ Priority 2: Handle MoMo Failed Redirect
+            if (isMoMoFailed) {
+                console.log('❌ Processing MoMo failed redirect');
+                
+                const orderId = urlParams.get('orderId');
+                const message = urlParams.get('message');
+                
+                setPaymentStatus('failed');
+                setPaymentDetails({
+                    orderId: orderId || 'Unknown',
+                    message: decodeURIComponent(message || 'Thanh toán MoMo thất bại'),
+                    paymentMethod: 'MoMo'
+                });
+                
+                setLoading(false);
+                return;
+            }
+
+            // ✅ Priority 3: Handle VNPay Callback (existing logic)
+            if (isVNPayCallback) {
+                console.log('💳 Processing VNPay callback');
+                
+                const vnp_OrderId = urlParams.get('vnp_TxnRef');
+                const vnp_ResponseCode = urlParams.get('vnp_ResponseCode');
+                const vnp_Amount = urlParams.get('vnp_Amount');
+                const vnp_PayDate = urlParams.get('vnp_PayDate');
+                const vnp_TransactionNo = urlParams.get('vnp_TransactionNo');
+                const vnp_BankCode = urlParams.get('vnp_BankCode');
+
+                console.log('VNPay callback params:', {
+                    vnp_OrderId, vnp_ResponseCode, vnp_Amount, vnp_PayDate, vnp_TransactionNo, vnp_BankCode
+                });
+
+                if (!vnp_ResponseCode || !vnp_OrderId) {
+                    console.log('Missing required VNPay parameters, showing error');
+                    setPaymentStatus('error');
+                    setLoading(false);
+                    return;
+                }
+
+                try {
+                    if (vnp_ResponseCode === '00') {
+                        // VNPay success
+                        setPaymentStatus('success');
+                        setPaymentDetails({
+                            orderId: vnp_OrderId,
+                            transactionRef: vnp_TransactionNo || vnp_OrderId,
+                            amount: vnp_Amount ? parseInt(vnp_Amount) / 100 : 0,
+                            paymentDate: vnp_PayDate ? 
+                                new Date(
+                                    vnp_PayDate.slice(0, 4) + '-' + 
+                                    vnp_PayDate.slice(4, 6) + '-' + 
+                                    vnp_PayDate.slice(6, 8) + ' ' + 
+                                    vnp_PayDate.slice(8, 10) + ':' + 
+                                    vnp_PayDate.slice(10, 12) + ':' + 
+                                    vnp_PayDate.slice(12, 14)
+                                ) : new Date(),
+                            status: 'Processing',
+                            bankCode: vnp_BankCode,
+                            paymentMethod: 'VNPay'
+                        });
+
+                        // Update order history for VNPay
+                        try {
+                            const orderHistory = JSON.parse(localStorage.getItem('orderHistory') || '[]');
+                            const orderIndex = orderHistory.findIndex(o => o.orderId === vnp_OrderId);
+                            
+                            if (orderIndex !== -1) {
+                                orderHistory[orderIndex].status = 'Processing';
+                                orderHistory[orderIndex].paymentDate = new Date().toISOString();
+                                localStorage.setItem('orderHistory', JSON.stringify(orderHistory));
+                                console.log('✅ Updated order status to Processing via VNPay callback');
+                            }
+                        } catch (error) {
+                            console.warn('Warning: Could not update order history:', error);
+                        }
+                    } else {
+                        // VNPay failed
+                        setPaymentStatus('failed');
+                        setPaymentDetails({
+                            orderId: vnp_OrderId,
+                            transactionRef: vnp_TransactionNo || vnp_OrderId,
+                            responseCode: vnp_ResponseCode,
+                            message: getErrorMessage(vnp_ResponseCode),
+                            paymentMethod: 'VNPay'
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error processing VNPay result:', error);
+                    setPaymentStatus('error');
+                } finally {
+                    setLoading(false);
+                }
+                return;
+            }
+
+            // ✅ Priority 4: Handle generic backend redirect params (fallback)
+            const orderId = urlParams.get('orderId');
+            const status = urlParams.get('status');
+            const amount = urlParams.get('amount');
+            const transactionId = urlParams.get('transactionId');
+            const message = urlParams.get('message');
+
+            if (orderId && status) {
+                console.log('✅ Processing generic backend redirect result');
+                
+                if (status === 'success') {
+                    setPaymentStatus('success');
+                    setPaymentDetails({
+                        orderId: orderId,
+                        transactionRef: transactionId || orderId,
+                        amount: amount ? parseFloat(amount) : 0,
+                        paymentDate: new Date(),
+                        status: 'Processing',
+                        message: message || 'Thanh toán thành công'
+                    });
+
+                    // Update orderHistory
+                    try {
+                        const orderHistory = JSON.parse(localStorage.getItem('orderHistory') || '[]');
+                        const orderIndex = orderHistory.findIndex(o => o.orderId === orderId);
+                        
+                        if (orderIndex !== -1) {
+                            orderHistory[orderIndex].status = 'Processing';
+                            orderHistory[orderIndex].paymentDate = new Date().toISOString();
+                            localStorage.setItem('orderHistory', JSON.stringify(orderHistory));
+                            console.log('✅ Updated order status to Processing via generic redirect');
+                        }
+                    } catch (error) {
+                        console.warn('Warning: Could not update order history:', error);
+                    }
+                } else {
                     setPaymentStatus('failed');
                     setPaymentDetails({
                         orderId: orderId,
                         message: message || 'Thanh toán thất bại'
-                    });
-                } else {
-                    setPaymentStatus('error');
-                    setPaymentDetails({
-                        orderId: orderId,
-                        message: message || 'Có lỗi xảy ra'
                     });
                 }
                 
@@ -278,6 +404,12 @@ const PaymentResult = () => {
                                     <span className="detail-label">Mã giao dịch:</span>
                                     <span className="detail-value">{paymentDetails.transactionRef}</span>
                                 </div>
+                                {paymentDetails.paymentMethod && (
+                                    <div className="detail-row">
+                                        <span className="detail-label">Phương thức thanh toán:</span>
+                                        <span className="detail-value payment-method">{paymentDetails.paymentMethod}</span>
+                                    </div>
+                                )}
                                 <div className="detail-row">
                                     <span className="detail-label">Số tiền thanh toán:</span>
                                     <span className="detail-value amount">{paymentDetails.amount?.toLocaleString('vi-VN')} VNĐ</span>
@@ -324,9 +456,11 @@ const PaymentResult = () => {
                         </div>
                         <h1 className="result-title failed">Thanh toán thất bại!</h1>
                         <p className="result-message">
-                            {paymentDetails?.responseCode ? 
-                                getErrorMessage(paymentDetails.responseCode) : 
-                                'Giao dịch của bạn không thành công. Vui lòng kiểm tra lại thông tin và thử lại.'
+                            {paymentDetails?.message ? 
+                                paymentDetails.message :
+                                paymentDetails?.responseCode ? 
+                                    getErrorMessage(paymentDetails.responseCode) : 
+                                    'Giao dịch của bạn không thành công. Vui lòng kiểm tra lại thông tin và thử lại.'
                             }
                         </p>
                         {paymentDetails && (
@@ -335,10 +469,18 @@ const PaymentResult = () => {
                                     <span className="detail-label">Mã đơn hàng:</span>
                                     <span className="detail-value">#{paymentDetails.orderId}</span>
                                 </div>
-                                <div className="detail-row">
-                                    <span className="detail-label">Mã giao dịch:</span>
-                                    <span className="detail-value">{paymentDetails.transactionRef}</span>
-                                </div>
+                                {paymentDetails.transactionRef && (
+                                    <div className="detail-row">
+                                        <span className="detail-label">Mã giao dịch:</span>
+                                        <span className="detail-value">{paymentDetails.transactionRef}</span>
+                                    </div>
+                                )}
+                                {paymentDetails.paymentMethod && (
+                                    <div className="detail-row">
+                                        <span className="detail-label">Phương thức thanh toán:</span>
+                                        <span className="detail-value payment-method">{paymentDetails.paymentMethod}</span>
+                                    </div>
+                                )}
                                 {paymentDetails.responseCode && (
                                     <div className="detail-row">
                                         <span className="detail-label">Mã lỗi:</span>

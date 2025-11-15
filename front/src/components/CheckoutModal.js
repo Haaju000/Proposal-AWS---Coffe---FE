@@ -17,7 +17,7 @@ const CheckoutModal = ({ isOpen, onClose, onOrderSuccess }) => {
     notes: ''
   });
   
-  const [paymentMethod, setPaymentMethod] = useState('COD'); // 'COD' hoặc 'VNPAY'
+  const [paymentMethod, setPaymentMethod] = useState('COD'); // 'COD', 'VNPAY', 'MOMO'
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
 
@@ -65,125 +65,83 @@ const CheckoutModal = ({ isOpen, onClose, onOrderSuccess }) => {
   };
 
   const handleSubmitOrder = async () => {
-    if (!validateForm()) {
-      return;
-    }
-
+    if (!validateForm()) return;
     setLoading(true);
-
     try {
-      console.log('🛒 Starting checkout with form data:', formData);
-      console.log('� Payment method:', paymentMethod);
-      console.log('�📦 Cart items:', cartItems);
-
-      // Validate cart items trước khi đặt hàng
-      const validationPromises = cartItems.map(async (item) => {
-        const orderItem = {
-          productId: String(item.originalId),
+      // ...existing code...
+      // Transform cart items to backend format
+      const orderItems = cartItems.map(item => {
+        let productId = item.originalId;
+        if (typeof productId === 'string' && productId.includes('-')) {
+          const parts = productId.split('-');
+          if (parts.length > 1 && (parts[0] === 'cake' || parts[0] === 'cakE' || parts[0] === 'drink' || parts[0] === 'toppings')) {
+            productId = parts.slice(1).join('-');
+          }
+        }
+        if (typeof productId !== 'string' || !productId || productId.length < 30) {
+          throw new Error(`Sản phẩm ${item.name} có ID UUID không hợp lệ`);
+        }
+        return {
+          productId,
           productType: item.type === 'drink' ? 'Drink' : 'Cake',
           quantity: item.quantity,
           toppingIds: []
         };
-        
-        try {
-          await orderService.validateOrderItem(orderItem);
-          return { item, valid: true, error: null };
-        } catch (error) {
-          return { item, valid: false, error: error.message };
-        }
       });
-      
-      const validationResults = await Promise.all(validationPromises);
-      const invalidItems = validationResults.filter(result => !result.valid);
-      
-      if (invalidItems.length > 0) {
-        const errorMessages = invalidItems.map(result => 
-          `• ${result.item.name}: ${result.error}`
-        ).join('\n');
-        
-        throw new Error(`Một số sản phẩm không hợp lệ:\n${errorMessages}`);
-      }
-
-      // Transform cart items to backend format
-      const orderItems = cartItems.map(item => ({
-        productId: String(item.originalId),
-        productType: item.type === 'drink' ? 'Drink' : 'Cake',
-        quantity: item.quantity,
-        toppingIds: []
-      }));
-
-      // Create order request với thông tin khách hàng
       const orderRequest = {
         items: orderItems,
-        customerInfo: {
-          name: formData.customerName,
-          email: formData.customerEmail,
-          phone: formData.phoneNumber,
-          address: formData.address,
-          notes: formData.notes || ''
-        }
+        deliveryAddress: formData.address,
+        deliveryPhone: formData.phoneNumber,
+        deliveryNote: formData.notes || ''
       };
-
-      console.log('📤 Order request:', orderRequest);
-
       if (paymentMethod === 'VNPAY') {
-        // Xử lý thanh toán VNPay
         await handleVNPayPayment(orderRequest);
+      } else if (paymentMethod === 'MOMO') {
+        await handleMoMoPayment(orderRequest);
       } else {
-        // Xử lý đặt hàng COD (Cash on Delivery)
         await handleCODOrder(orderRequest);
       }
-      
     } catch (error) {
-      console.error('❌ Order processing failed:', error);
-      
       let errorMessage = 'Có lỗi xảy ra khi xử lý đơn hàng. Vui lòng thử lại.';
-      
-      if (error.message) {
-        if (error.message.includes('Not enough stock')) {
-          errorMessage = '❌ Một số sản phẩm đã hết hàng. Vui lòng kiểm tra lại giỏ hàng.';
-        } else if (error.message.includes('Cannot identify user')) {
-          errorMessage = '🔐 Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.';
-        } else {
-          errorMessage = error.message;
-        }
-      }
-      
+      if (error.message) errorMessage = error.message;
       alert(`🚫 Xử lý đơn hàng thất bại!\n\n${errorMessage}`);
     } finally {
       setLoading(false);
     }
+  // hết hàm handleSubmitOrder
   };
-
   // Xử lý đặt hàng COD
   const handleCODOrder = async (orderRequest) => {
-    // Call API
-    const response = await orderService.createOrder(orderRequest);
-    console.log('✅ COD Order created successfully:', response);
+    console.log('🛒 Processing COD order with request:', orderRequest);
     
-    // Extract order info
-    const order = response.order || response;
-    const orderId = order.id || order.orderId || 'N/A';
-    const totalPrice = order.totalPrice || order.finalPrice || cartTotal;
-    const status = order.status || 'Pending';
-    
-    // Success callback
-    if (onOrderSuccess) {
-      onOrderSuccess({
-        orderId,
-        totalPrice,
-        status,
-        customerInfo: formData,
-        items: cartItems
-      });
-    }
-    
-    // Clear cart and close modal
-    clearCart();
-    onClose();
-    
-    // Show success notification
-    alert(`🎉 Đặt hàng thành công!
+    try {
+      // Call API
+      const response = await orderService.createOrder(orderRequest);
+      console.log('✅ COD Order created successfully:', response);
+      
+      // Extract order info
+      const order = response.order || response;
+      const orderId = order.id || order.orderId || 'N/A';
+      const totalPrice = order.totalPrice || order.finalPrice || cartTotal;
+      const status = order.status || 'Pending';
+      
+      // Success callback
+      if (onOrderSuccess) {
+        onOrderSuccess({
+          orderId,
+          totalPrice,
+          status,
+          customerInfo: formData,
+          items: cartItems
+        });
+      }
+      
+      // Clear cart and close modal
+      clearCart();
+      onClose();
+      
+      // Show success notification
+      alert(`🎉 Đặt hàng thành công!
 
 📋 Mã đơn hàng: #${orderId}
 👤 Khách hàng: ${formData.customerName}
@@ -194,6 +152,21 @@ const CheckoutModal = ({ isOpen, onClose, onOrderSuccess }) => {
 💵 Thanh toán: Thu tiền khi giao hàng (COD)
 
 Cảm ơn bạn đã đặt hàng! Chúng tôi sẽ liên hệ sớm nhất.`);
+      
+    } catch (error) {
+      console.error('❌ COD Order failed:', error);
+      
+      // Enhanced error logging for debugging
+      if (error.response) {
+        console.error('COD Error Response:', {
+          status: error.response.status,
+          data: error.response.data,
+          headers: error.response.headers
+        });
+      }
+      
+      throw error; // Re-throw để handleSubmitOrder catch
+    }
   };
 
   // Xử lý thanh toán VNPay
@@ -246,6 +219,60 @@ Cảm ơn bạn đã đặt hàng! Chúng tôi sẽ liên hệ sớm nhất.`);
     } catch (error) {
       console.error('❌ VNPay payment failed:', error);
       throw new Error(`Lỗi tạo thanh toán VNPay: ${error.message}`);
+    }
+  };
+
+  // Xử lý thanh toán MoMo
+  const handleMoMoPayment = async (orderRequest) => {
+    try {
+      // Bước 1: Tạo đơn hàng trước để có orderId
+      console.log('📦 Creating order first for MoMo payment...');
+      const orderResponse = await orderService.createOrder(orderRequest);
+      console.log('✅ Order created for MoMo:', orderResponse);
+      
+      const order = orderResponse.order || orderResponse;
+      const orderId = order.id || order.orderId;
+      
+      if (!orderId) {
+        throw new Error('Không thể tạo mã đơn hàng');
+      }
+      
+      // Bước 2: Tạo MoMo payment với orderId
+      console.log('📱 Creating MoMo payment for order:', orderId);
+      const returnUrl = `${window.location.origin}/payment-success`;
+      const notifyUrl = `${window.location.origin}/payment-failed`;
+      
+      const paymentResponse = await paymentService.createMoMoPayment(orderId, returnUrl, notifyUrl);
+      console.log('✅ MoMo payment response:', paymentResponse);
+      
+      // Lưu thông tin order để xử lý sau khi thanh toán
+      const orderData = {
+        orderId: orderId,
+        orderRequest,
+        cartItems,
+        cartTotal,
+        customerInfo: formData,
+        paymentMethod: 'MOMO',
+        timestamp: new Date().toISOString()
+      };
+      
+      localStorage.setItem('momoOrderData', JSON.stringify(orderData));
+      
+      // Clear cart và close modal trước khi redirect
+      clearCart();
+      onClose();
+      
+      // Redirect đến MoMo  
+      if (paymentResponse.payUrl) {
+        console.log('🚀 Redirecting to MoMo...');
+        paymentService.redirectToMoMo(paymentResponse.payUrl);
+      } else {
+        throw new Error('Không nhận được URL thanh toán từ MoMo');
+      }
+      
+    } catch (error) {
+      console.error('❌ MoMo payment failed:', error);
+      throw new Error(`Lỗi tạo thanh toán MoMo: ${error.message}`);
     }
   };
 
@@ -415,6 +442,24 @@ Cảm ơn bạn đã đặt hàng! Chúng tôi sẽ liên hệ sớm nhất.`);
                 </div>
               </label>
             </div>
+
+            <div className="payment-method">
+              <input
+                type="radio"
+                id="momo"
+                name="paymentMethod"
+                value="MOMO"
+                checked={paymentMethod === 'MOMO'}
+                onChange={(e) => setPaymentMethod(e.target.value)}
+              />
+              <label htmlFor="momo" className="payment-method-label">
+                <div className="payment-method-icon">📱</div>
+                <div className="payment-method-info">
+                  <span className="payment-method-name">Thanh toán MoMo</span>
+                  <span className="payment-method-desc">Thanh toán qua ví MoMo (QR Code, Deep Link)</span>
+                </div>
+              </label>
+            </div>
           </div>
         </div>
 
@@ -429,7 +474,9 @@ Cảm ơn bạn đã đặt hàng! Chúng tôi sẽ liên hệ sớm nhất.`);
             disabled={loading || cartItems.length === 0}
           >
             {loading ? '🔄 Đang xử lý...' : 
-             paymentMethod === 'VNPAY' ? '💳 Thanh toán VNPay' : '🛒 Đặt hàng ngay'}
+             paymentMethod === 'VNPAY' ? '💳 Thanh toán VNPay' :
+             paymentMethod === 'MOMO' ? '📱 Thanh toán MoMo' :
+             '🛒 Đặt hàng ngay'}
           </button>
         </div>
       </div>

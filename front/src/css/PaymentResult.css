@@ -237,6 +237,23 @@
     font-weight: 600;
 }
 
+.detail-value.payment-method {
+    color: #8B5CF6;
+    background: #EDE9FE;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.detail-value.payment-method:before {
+    content: "💳";
+    font-size: 12px;
+}
+
 /* Action Buttons */
 .action-buttons {
     display: flex;

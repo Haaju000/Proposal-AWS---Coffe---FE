@@ -110,6 +110,104 @@
   margin: 0;
 }
 
+/* Search Section */
+.search-section {
+  margin-bottom: 2rem;
+  flex-shrink: 0;
+}
+
+.search-box {
+  position: relative;
+  margin-bottom: 0.75rem;
+}
+
+.search-input {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  border: 2px solid #E5E7EB;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  background: #F9FAFB;
+  transition: all 0.3s ease;
+  font-family: inherit;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #8B4513;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(139, 69, 19, 0.1);
+}
+
+.search-input::placeholder {
+  color: #9CA3AF;
+}
+
+.search-clear {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: #6B7280;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.search-clear:hover {
+  background: #374151;
+}
+
+.search-results-info {
+  font-size: 0.85rem;
+  color: #6B7280;
+  font-style: italic;
+  padding: 0.25rem 0.5rem;
+}
+
+/* Sort Section */
+.sort-section {
+  margin-bottom: 2rem;
+  flex-shrink: 0;
+}
+
+.sort-label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 0.5rem;
+}
+
+.sort-select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid #E5E7EB;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  background: white;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.sort-select:focus {
+  outline: none;
+  border-color: #8B4513;
+  box-shadow: 0 0 0 3px rgba(139, 69, 19, 0.1);
+}
+
+.sort-select:hover {
+  border-color: #D1D5DB;
+}
+
 /* Category Navigation */
 .menu-categories {
   margin-bottom: 2rem;
@@ -1299,4 +1397,40 @@
   .item-price {
     font-size: 1.25rem;
   }
+}
+
+/* Checkout Button */
+.checkout-btn {
+  width: 100%;
+  background: linear-gradient(135deg, #8B4513, #A0522D);
+  color: white;
+  border: none;
+  padding: 1rem 1.5rem;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.checkout-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #7C3A0C, #8B4513);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(139, 69, 19, 0.3);
+}
+
+.checkout-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.checkout-btn:disabled {
+  background: #9CA3AF;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
