@@ -10,10 +10,17 @@
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  z-index: 9999;
+  z-index: 10000; /* Higher than header */
   padding: 40px 20px;
   overflow-y: auto;
   animation: fadeIn 0.3s ease-out;
+}
+
+/* Reset any potential CSS interference */
+.shipper-registration-overlay *,
+.shipper-registration-modal *,
+.registration-form * {
+  box-sizing: border-box !important;
 }
 
 .shipper-registration-modal {
@@ -21,11 +28,16 @@
   border-radius: 20px;
   max-width: 800px;
   width: 100%;
-  max-height: 95vh;
-  overflow-y: visible;
+  max-height: calc(100vh - 80px); /* Account for padding */
+  overflow-y: auto; /* Allow scrolling if needed */
+  overflow-x: hidden; /* Prevent horizontal overflow */
   margin: 0 auto;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   animation: slideUp 0.4s ease-out;
+  position: relative;
+  z-index: 10001;
+  height: auto; /* Allow natural height */
+  min-height: 600px; /* Minimum height */
 }
 
 /* Modal Header */
@@ -52,14 +64,14 @@
   animation: shimmer 3s infinite;
 }
 
-.header-content {
+.shipper-registration-overlay .header-content {
   display: flex;
   align-items: center;
   gap: 20px;
   z-index: 1;
 }
 
-.icon-badge {
+.shipper-registration-overlay .icon-badge {
   background: rgba(255, 255, 255, 0.2);
   width: 60px;
   height: 60px;
@@ -72,20 +84,20 @@
   border: 2px solid rgba(255, 255, 255, 0.3);
 }
 
-.header-text h2 {
+.shipper-registration-overlay .header-text h2 {
   margin: 0;
   font-size: 28px;
   font-weight: 700;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
-.header-text p {
+.shipper-registration-overlay .header-text p {
   margin: 5px 0 0 0;
   opacity: 0.9;
   font-size: 16px;
 }
 
-.close-btn {
+.shipper-registration-overlay .close-btn {
   background: rgba(255, 255, 255, 0.2);
   border: none;
   color: white;
@@ -101,21 +113,78 @@
   z-index: 1;
 }
 
-.close-btn:hover {
+.shipper-registration-overlay .close-btn:hover {
   background: rgba(255, 255, 255, 0.3);
   transform: rotate(90deg);
 }
 
 /* Form Styling */
-.registration-form {
+.shipper-registration-overlay .registration-form {
   padding: 40px;
+  overflow: visible; /* Allow error messages to show */
+  width: 100%; /* Force container width */
+  box-sizing: border-box;
+  max-height: none; /* Remove height restriction */
+  height: auto; /* Allow natural height */
 }
 
-.form-section {
+/* Critical: Prevent input expansion */
+.shipper-registration-overlay .form-group input[type="text"],
+.shipper-registration-overlay .form-group input[type="email"] {
+  display: block !important;
+  width: 100% !important;
+  height: 48px !important;
+  min-height: 48px !important;
+  max-height: 48px !important;
+  padding: 12px 16px !important;
+  border: 2px solid #e0e0e0 !important;
+  border-radius: 10px !important;
+  font-size: 14px !important;
+  line-height: 1.2 !important;
+  font-family: inherit !important;
+  background: #fafafa !important;
+  box-sizing: border-box !important;
+  resize: none !important;
+  overflow: hidden !important;
+  white-space: nowrap !important;
+  text-overflow: ellipsis !important;
+  transition: border-color 0.3s ease, background-color 0.3s ease !important;
+}
+
+/* Error state - maintain size */
+.shipper-registration-overlay .form-group input[type="text"].error,
+.shipper-registration-overlay .form-group input[type="email"].error {
+  border-color: #e74c3c !important;
+  background: #fff5f5 !important;
+  width: 100% !important;
+  height: 48px !important;
+  min-height: 48px !important;
+  max-height: 48px !important;
+  animation: shakeInput 0.4s ease-in-out !important;
+}
+
+/* Focus state - maintain size */
+.shipper-registration-overlay .form-group input[type="text"]:focus,
+.shipper-registration-overlay .form-group input[type="email"]:focus {
+  outline: none !important;
+  border-color: #8B4513 !important;
+  background: white !important;
+  box-shadow: 0 0 0 3px rgba(139, 69, 19, 0.1) !important;
+  width: 100% !important;
+  height: 48px !important;
+  min-height: 48px !important;
+  max-height: 48px !important;
+}
+
+.shipper-registration-overlay .form-section {
   margin-bottom: 40px;
+  width: 100%; /* Ensure consistent width */
+  max-width: 100%; /* Prevent expansion */
+  overflow: visible; /* Allow error messages */
+  height: auto; /* Allow natural height */
 }
 
-.form-section h3 {
+.shipper-registration-overlay .form-section h3 {
   color: #8B4513;
   font-size: 20px;
   font-weight: 600;
@@ -127,74 +196,151 @@
   gap: 10px;
 }
 
-.form-row {
+.shipper-registration-overlay .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 20px;
   margin-bottom: 20px;
 }
 
-.form-group {
+.shipper-registration-overlay .form-group {
   margin-bottom: 20px;
+  min-height: 85px; /* Reserve space for error messages */
+  max-height: none; /* Allow natural height */
+  display: flex;
+  flex-direction: column;
+  width: 100%; /* Ensure consistent width */
+  max-width: 100%; /* Never exceed container */
+  box-sizing: border-box; /* Include padding in width */
+  overflow: visible; /* Allow error messages to show */
+  position: relative; /* For proper positioning */
+  flex-shrink: 0; /* Prevent form group from shrinking */
 }
 
-.form-group label {
+.shipper-registration-overlay .form-group label {
   display: block;
   margin-bottom: 8px;
   color: #333;
   font-weight: 500;
   font-size: 14px;
+  flex-shrink: 0; /* Prevent label from shrinking */
 }
 
-.required {
+.shipper-registration-overlay .required {
   color: #e74c3c;
 }
 
-.form-group input,
-.form-group select,
-.form-group textarea {
-  width: 100%;
-  padding: 12px 16px;
+.shipper-registration-overlay .form-group input,
+.shipper-registration-overlay .form-group select {
+  width: 100% !important;
+  max-width: 100% !important; /* Prevent expansion */
+  min-width: 0 !important; /* Allow shrinking if needed */
+  height: 48px !important; /* Fixed height for inputs and selects */
+  padding: 12px 16px !important;
   border: 2px solid #e0e0e0;
   border-radius: 10px;
   font-size: 14px;
-  transition: all 0.3s ease;
+  transition: border-color 0.3s ease, background-color 0.3s ease; /* Limit transitions */
   font-family: inherit;
   background: #fafafa;
+  box-sizing: border-box !important; /* Ensure consistent sizing */
+  flex-shrink: 0 !important; /* Prevent input from shrinking */
+  resize: none !important; /* Prevent resize */
+  overflow: hidden !important; /* Prevent text overflow expansion */
+  vertical-align: top; /* Prevent baseline issues */
+  line-height: 1.2 !important; /* Control line height */
+  white-space: nowrap !important; /* Prevent text wrapping */
+  text-overflow: ellipsis !important; /* Show ellipsis for overflow */
 }
 
-.form-group input:focus,
-.form-group select:focus,
-.form-group textarea:focus {
+.shipper-registration-overlay .form-group textarea {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  height: auto !important; /* Allow textarea to have variable height */
+  min-height: 80px !important; /* Minimum height for textarea */
+  max-height: 120px !important; /* Maximum height for textarea */
+  padding: 12px 16px !important;
+  border: 2px solid #e0e0e0;
+  border-radius: 10px;
+  font-size: 14px;
+  transition: border-color 0.3s ease, background-color 0.3s ease;
+  font-family: inherit;
+  background: #fafafa;
+  box-sizing: border-box !important;
+  flex-shrink: 0 !important;
+  resize: vertical !important; /* Allow vertical resize only */
+  overflow-y: auto !important; /* Allow vertical scroll */
+  line-height: 1.4 !important;
+}
+
+.shipper-registration-overlay .form-group input:focus,
+.shipper-registration-overlay .form-group select:focus,
+.shipper-registration-overlay .form-group textarea:focus {
   outline: none;
   border-color: #8B4513;
   background: white;
   box-shadow: 0 0 0 3px rgba(139, 69, 19, 0.1);
+  height: 48px !important; /* Maintain height on focus */
+  width: 100% !important; /* Maintain width on focus */
+  max-width: 100% !important; /* Prevent expansion on focus */
 }
 
-.form-group input.error,
-.form-group select.error,
-.form-group textarea.error {
-  border-color: #e74c3c;
-  background: #fff5f5;
+.shipper-registration-overlay .form-group textarea:focus {
+  height: auto; /* Allow textarea to expand on focus */
+  min-height: 80px;
+  max-height: 120px;
 }
 
-.error-message {
+.shipper-registration-overlay .form-group input.error,
+.shipper-registration-overlay .form-group select.error,
+.shipper-registration-overlay .form-group textarea.error {
+  border-color: #e74c3c !important; /* Force border color */
+  background: #fff5f5 !important; /* Force background */
+  animation: shakeInput 0.4s ease-in-out;
+  width: 100% !important; /* Force width */
+  height: 48px !important; /* Force height for inputs/selects */
+  max-width: 100% !important; /* Force max-width */
+  min-width: 0 !important; /* Force min-width */
+  box-sizing: border-box !important; /* Force box-sizing */
+  overflow: hidden !important; /* Prevent content overflow */
+  resize: none !important; /* Prevent resize */
+  white-space: nowrap !important; /* Prevent text wrapping */
+  text-overflow: ellipsis !important; /* Show ellipsis for overflow */
+  line-height: 1.2 !important; /* Control line height */
+}
+
+.shipper-registration-overlay .form-group textarea.error {
+  height: auto !important; /* Allow textarea to have variable height */
+  min-height: 80px !important; /* Minimum height for textarea */
+  max-height: 120px !important; /* Maximum height for textarea */
+}
+
+.shipper-registration-overlay .error-message {
   color: #e74c3c;
   font-size: 12px;
   margin-top: 5px;
   display: block;
+  min-height: 18px; /* Fixed height to prevent layout shifts */
+  line-height: 1.3;
+  animation: fadeInError 0.3s ease-out;
+  width: 100%; /* Match input width */
+  max-width: 100%; /* Never exceed container */
+  box-sizing: border-box;
+  word-wrap: break-word; /* Handle long error messages */
+  overflow-wrap: break-word; /* Modern alternative */
+  hyphens: auto; /* Enable hyphenation */
 }
 
 /* Time Slots */
-.time-slots {
+.shipper-registration-overlay .time-slots {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 15px;
   margin-top: 15px;
 }
 
-.time-slot {
+.shipper-registration-overlay .time-slot {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -207,30 +353,30 @@
   user-select: none;
 }
 
-.time-slot:hover {
+.shipper-registration-overlay .time-slot:hover {
   background: #f0f0f0;
   border-color: #8B4513;
 }
 
-.time-slot input[type="checkbox"] {
+.shipper-registration-overlay .time-slot input[type="checkbox"] {
   width: 18px;
   height: 18px;
   accent-color: #8B4513;
 }
 
-.time-slot input[type="checkbox"]:checked + .checkmark {
+.shipper-registration-overlay .time-slot input[type="checkbox"]:checked + .checkmark {
   color: #8B4513;
   font-weight: 600;
 }
 
-.checkmark {
+.shipper-registration-overlay .checkmark {
   font-size: 14px;
   color: #666;
   transition: all 0.3s ease;
 }
 
 /* Form Actions */
-.form-actions {
+.shipper-registration-overlay .form-actions {
   display: flex;
   gap: 20px;
   justify-content: flex-end;
@@ -239,8 +385,8 @@
   margin-top: 40px;
 }
 
-.cancel-btn,
-.submit-btn {
+.shipper-registration-overlay .cancel-btn,
+.shipper-registration-overlay .submit-btn {
   padding: 15px 30px;
   border: none;
   border-radius: 10px;
@@ -253,35 +399,35 @@
   gap: 8px;
 }
 
-.cancel-btn {
+.shipper-registration-overlay .cancel-btn {
   background: #f8f8f8;
   color: #666;
   border: 2px solid #e0e0e0;
 }
 
-.cancel-btn:hover {
+.shipper-registration-overlay .cancel-btn:hover {
   background: #e0e0e0;
   color: #333;
 }
 
-.submit-btn {
+.shipper-registration-overlay .submit-btn {
   background: linear-gradient(135deg, #8B4513 0%, #D2691E 100%);
   color: white;
   box-shadow: 0 4px 15px rgba(139, 69, 19, 0.3);
 }
 
-.submit-btn:hover:not(:disabled) {
+.shipper-registration-overlay .submit-btn:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(139, 69, 19, 0.4);
 }
 
-.submit-btn:disabled {
+.shipper-registration-overlay .submit-btn:disabled {
   opacity: 0.7;
   cursor: not-allowed;
   transform: none;
 }
 
-.loading-spinner {
+.shipper-registration-overlay .loading-spinner {
   width: 16px;
   height: 16px;
   border: 2px solid rgba(255, 255, 255, 0.3);
@@ -329,14 +475,51 @@
   }
 }
 
+@keyframes fadeInError {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shakeInput {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-2px); /* Reduced shake intensity */
+  }
+  75% {
+    transform: translateX(2px); /* Reduced shake intensity */
+  }
+}
+
+@keyframes slideInError {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .shipper-registration-overlay {
-    padding: 10px;
+    padding: 20px 10px;
+    align-items: flex-start; /* Always align to top on mobile */
   }
 
   .shipper-registration-modal {
-    max-height: 95vh;
+    max-height: calc(100vh - 40px); /* Less padding on mobile */
+    width: calc(100vw - 20px); /* Full width minus padding */
+    margin: 0;
   }
 
   .modal-header {
@@ -378,7 +561,7 @@
 }
 
 /* Success Message */
-.success-message {
+.shipper-registration-overlay .success-message {
   padding: 40px;
   text-align: center;
   background: linear-gradient(135deg, #10B981, #059669);
@@ -387,26 +570,26 @@
   animation: slideUp 0.4s ease-out;
 }
 
-.success-icon {
+.shipper-registration-overlay .success-icon {
   font-size: 4rem;
   margin-bottom: 20px;
   animation: bounce 0.6s ease-out;
 }
 
-.success-message h3 {
+.shipper-registration-overlay .success-message h3 {
   font-size: 1.5rem;
   margin-bottom: 15px;
   font-weight: 600;
 }
 
-.success-message p {
+.shipper-registration-overlay .success-message p {
   font-size: 1rem;
   line-height: 1.6;
   margin-bottom: 25px;
   opacity: 0.95;
 }
 
-.next-steps {
+.shipper-registration-overlay .next-steps {
   background: rgba(255, 255, 255, 0.1);
   border-radius: 12px;
   padding: 20px;
@@ -414,19 +597,19 @@
   backdrop-filter: blur(10px);
 }
 
-.next-steps h4 {
+.shipper-registration-overlay .next-steps h4 {
   margin-bottom: 15px;
   font-size: 1.1rem;
   color: #F0FDF4;
 }
 
-.next-steps ul {
+.shipper-registration-overlay .next-steps ul {
   list-style: none;
   padding: 0;
   margin: 0;
 }
 
-.next-steps li {
+.shipper-registration-overlay .next-steps li {
   padding: 8px 0;
   font-size: 0.95rem;
   display: flex;
@@ -435,7 +618,7 @@
 }
 
 /* Error Message Block */
-.error-message-block {
+.shipper-registration-overlay .error-message-block {
   padding: 40px;
   text-align: center;
   background: linear-gradient(135deg, #EF4444, #DC2626);
@@ -444,25 +627,25 @@
   animation: slideUp 0.4s ease-out;
 }
 
-.error-icon {
+.shipper-registration-overlay .error-icon {
   font-size: 3rem;
   margin-bottom: 20px;
 }
 
-.error-message-block h3 {
+.shipper-registration-overlay .error-message-block h3 {
   font-size: 1.5rem;
   margin-bottom: 15px;
   font-weight: 600;
 }
 
-.error-message-block p {
+.shipper-registration-overlay .error-message-block p {
   font-size: 1rem;
   line-height: 1.6;
   margin-bottom: 25px;
   opacity: 0.95;
 }
 
-.retry-btn {
+.shipper-registration-overlay .retry-btn {
   background: rgba(255, 255, 255, 0.2);
   color: white;
   border: 2px solid rgba(255, 255, 255, 0.3);
@@ -474,14 +657,14 @@
   backdrop-filter: blur(10px);
 }
 
-.retry-btn:hover {
+.shipper-registration-overlay .retry-btn:hover {
   background: rgba(255, 255, 255, 0.3);
   border-color: rgba(255, 255, 255, 0.5);
   transform: translateY(-2px);
 }
 
 /* Auth Error */
-.auth-error {
+.shipper-registration-overlay .auth-error {
   background: linear-gradient(135deg, #FEF3C7, #FDE68A);
   border: 1px solid #F59E0B;
   border-radius: 12px;
@@ -489,26 +672,29 @@
   margin-bottom: 25px;
   text-align: center;
   color: #92400E;
+  position: relative;
+  overflow: hidden;
+  animation: slideInError 0.4s ease-out;
 }
 
-.auth-error-icon {
+.shipper-registration-overlay .auth-error-icon {
   font-size: 2rem;
   margin-bottom: 10px;
 }
 
-.auth-error p {
+.shipper-registration-overlay .auth-error p {
   font-weight: 600;
   margin-bottom: 5px;
   font-size: 1rem;
 }
 
-.auth-error small {
+.shipper-registration-overlay .auth-error small {
   font-size: 0.875rem;
   opacity: 0.8;
 }
 
 /* Section Description */
-.section-description {
+.shipper-registration-overlay .section-description {
   color: #64748B;
   font-size: 0.95rem;
   line-height: 1.5;
@@ -517,19 +703,29 @@
   background: #F8FAFC;
   border-radius: 8px;
   border-left: 4px solid #8B4513;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  word-wrap: break-word;
 }
 
 /* Form Hint */
-.form-hint {
+.shipper-registration-overlay .form-hint {
   color: #64748B;
   font-size: 0.8rem;
   margin-top: 5px;
   display: block;
   font-style: italic;
+  min-height: 16px; /* Consistent spacing */
+  line-height: 1.2;
+  width: 100%;
+  max-width: 100%; /* Prevent expansion */
+  box-sizing: border-box;
+  word-wrap: break-word;
 }
 
 /* Info Section */
-.info-section {
+.shipper-registration-overlay .info-section {
   background: linear-gradient(135deg, #F0F9FF, #E0F2FE);
   border: 1px solid #0EA5E9;
   border-radius: 15px;
@@ -537,7 +733,7 @@
   margin: 25px 0;
 }
 
-.info-section h3 {
+.shipper-registration-overlay .info-section h3 {
   color: #0C4A6E;
   margin-bottom: 20px;
   font-size: 1.2rem;
@@ -545,13 +741,13 @@
 }
 
 /* Process Steps */
-.process-steps {
+.shipper-registration-overlay .process-steps {
   display: flex;
   gap: 20px;
   flex-wrap: wrap;
 }
 
-.step {
+.shipper-registration-overlay .step {
   flex: 1;
   min-width: 200px;
   display: flex;
@@ -559,7 +755,7 @@
   align-items: flex-start;
 }
 
-.step-number {
+.shipper-registration-overlay .step-number {
   width: 35px;
   height: 35px;
   background: linear-gradient(135deg, #0EA5E9, #0284C7);
@@ -573,14 +769,14 @@
   flex-shrink: 0;
 }
 
-.step-content h4 {
+.shipper-registration-overlay .step-content h4 {
   color: #0C4A6E;
   margin-bottom: 5px;
   font-size: 1rem;
   font-weight: 600;
 }
 
-.step-content p {
+.shipper-registration-overlay .step-content p {
   color: #475569;
   font-size: 0.875rem;
   line-height: 1.4;
@@ -604,26 +800,56 @@
 }
 
 @media (max-width: 768px) {
-  .process-steps {
+  .shipper-registration-overlay .process-steps {
     flex-direction: column;
     gap: 15px;
   }
   
-  .step {
+  .shipper-registration-overlay .step {
     min-width: auto;
   }
   
-  .next-steps {
+  .shipper-registration-overlay .next-steps {
     padding: 15px;
+  }
+
+  .shipper-registration-overlay .form-row {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .shipper-registration-overlay .time-slots {
+    grid-template-columns: 1fr;
+  }
+
+  .shipper-registration-overlay .form-actions {
+    flex-direction: column;
+  }
+
+  .shipper-registration-overlay .cancel-btn,
+  .shipper-registration-overlay .submit-btn {
+    width: 100%;
+    justify-content: center;
   }
 }
 
 @media (max-width: 480px) {
-  .modal-header {
-    padding: 15px;
+  .shipper-registration-overlay {
+    padding: 10px 5px;
+  }
+  
+  .shipper-registration-modal {
+    width: calc(100vw - 10px);
+    max-height: calc(100vh - 20px);
+    border-radius: 15px;
   }
 
-  .header-content {
+  .modal-header {
+    padding: 15px;
+    border-radius: 15px 15px 0 0;
+  }
+
+  .shipper-registration-overlay .header-content {
     gap: 15px;
   }
 
@@ -635,17 +861,17 @@
     padding: 15px;
   }
 
-  .form-section h3 {
+  .shipper-registration-overlay .form-section h3 {
     font-size: 18px;
   }
   
-  .success-message,
-  .error-message-block {
+  .shipper-registration-overlay .success-message,
+  .shipper-registration-overlay .error-message-block {
     padding: 25px;
   }
   
-  .success-icon,
-  .error-icon {
+  .shipper-registration-overlay .success-icon,
+  .shipper-registration-overlay .error-icon {
     font-size: 3rem;
   }
 }

@@ -59,7 +59,7 @@ const paymentService = {
     try {
       console.log('💳 Creating VNPay payment for order:', orderId);
       const response = await apiClient.post('/Payment/vnpay/create', {
-        orderId: orderId
+        OrderId: orderId  // ✅ Match backend property name
       });
       
       console.log('✅ VNPay payment URL created successfully:', response.data);
@@ -87,7 +87,7 @@ const paymentService = {
     try {
       console.log('💰 Creating MoMo payment for order:', orderId);
       const response = await apiClient.post('/MoMoPayment/create', {
-        orderId: orderId
+        OrderId: orderId  // ✅ Match backend property name
       });
       
       console.log('✅ MoMo payment created successfully:', response.data);
@@ -141,8 +141,8 @@ const paymentService = {
     try {
       console.log('🧪 Testing MoMo callback for order:', orderId);
       const response = await apiClient.post('/MoMoPayment/test-callback', {
-        orderId: orderId,
-        resultCode: resultCode
+        OrderId: orderId,     // ✅ Match backend property name
+        ResultCode: resultCode // ✅ Match backend property name
       });
       
       console.log('✅ MoMo callback test successful:', response.data);

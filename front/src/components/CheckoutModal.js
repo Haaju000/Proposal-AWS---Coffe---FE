@@ -20,6 +20,7 @@ const CheckoutModal = ({ isOpen, onClose, onOrderSuccess }) => {
   const [paymentMethod, setPaymentMethod] = useState('COD'); // 'COD', 'VNPAY', 'MOMO'
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false); // ✅ Prevent double submission
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -66,34 +67,99 @@ const CheckoutModal = ({ isOpen, onClose, onOrderSuccess }) => {
 
   const handleSubmitOrder = async () => {
     if (!validateForm()) return;
+    
+    // ✅ Prevent double submission
+    if (isSubmitting) {
+      console.log('⚠️ Order submission already in progress, ignoring...');
+      return;
+    }
+    
+    // ✅ Validate cart không empty trước khi xử lý
+    if (!cartItems || cartItems.length === 0) {
+      alert('❌ Giỏ hàng trống! Vui lòng thêm sản phẩm vào giỏ hàng trước khi đặt hàng.');
+      return;
+    }
+    
+    console.log('🛒 Starting order submission with cart items:', cartItems);
     setLoading(true);
+    setIsSubmitting(true); // ✅ Mark as submitting
+    
     try {
       // ...existing code...
-      // Transform cart items to backend format
-      const orderItems = cartItems.map(item => {
-        let productId = item.originalId;
+      // ✅ Transform cart items to backend format với proper toppingIds
+      console.log('📦 Transforming cart items for backend:', cartItems);
+      
+      let orderItems = cartItems.map(item => {
+        // Use originalId (clean UUID from API) for backend
+        let productId = item.originalId || item.productId;
+        
+        // Handle legacy ID format nếu có
         if (typeof productId === 'string' && productId.includes('-')) {
           const parts = productId.split('-');
           if (parts.length > 1 && (parts[0] === 'cake' || parts[0] === 'cakE' || parts[0] === 'drink' || parts[0] === 'toppings')) {
             productId = parts.slice(1).join('-');
           }
         }
+        
+        // Validate UUID
         if (typeof productId !== 'string' || !productId || productId.length < 30) {
-          throw new Error(`Sản phẩm ${item.name} có ID UUID không hợp lệ`);
+          console.error('❌ Invalid product ID for item:', item);
+          throw new Error(`Sản phẩm ${item.name} có ID UUID không hợp lệ: ${productId}`);
         }
-        return {
+        
+        // ✅ Extract toppingIds từ selectedToppings
+        const toppingIds = item.selectedToppings ? 
+          item.selectedToppings.map(topping => {
+            const toppingId = topping.originalId || topping.id;
+            console.log('🧁 Processing topping:', { name: topping.name, id: toppingId });
+            return toppingId;
+          }).filter(id => id) : []; // Filter out undefined/null IDs
+        
+        const orderItem = {
           productId,
           productType: item.type === 'drink' ? 'Drink' : 'Cake',
           quantity: item.quantity,
-          toppingIds: []
+          toppingIds
         };
+        
+        console.log('✅ Transformed order item:', orderItem);
+        return orderItem;
       });
+      
+      // ✅ Validate không có duplicate productId
+      const productIds = orderItems.map(item => item.productId);
+      const uniqueProductIds = [...new Set(productIds)];
+      
+      if (productIds.length !== uniqueProductIds.length) {
+        console.warn('⚠️ Detected duplicate product IDs in order:', productIds);
+        // Keep unique items only
+        const uniqueOrderItems = orderItems.filter((item, index, self) => 
+          index === self.findIndex(t => 
+            t.productId === item.productId && 
+            JSON.stringify(t.toppingIds) === JSON.stringify(item.toppingIds)
+          )
+        );
+        console.log('🔧 Deduplicated order items:', uniqueOrderItems);
+        orderItems = uniqueOrderItems;
+      }
+      
+      console.log('📦 Final order items for backend:', orderItems);
+      // ✅ Create order request với unique identifier để tránh duplicate
+      const uniqueClientId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       const orderRequest = {
         items: orderItems,
         deliveryAddress: formData.address,
         deliveryPhone: formData.phoneNumber,
-        deliveryNote: formData.notes || ''
+        deliveryNote: formData.notes || '',
+        customerName: formData.customerName, // ✅ Add customer name
+        customerEmail: formData.customerEmail, // ✅ Add customer email
+        // Add unique identifier để backend có thể detect và prevent duplicate
+        clientOrderId: uniqueClientId,
+        requestTimestamp: new Date().toISOString(),
+        paymentMethod: paymentMethod // ✅ Đảm bảo payment method được gửi đến backend
       };
+      
+      console.log('🚀 Final order request with unique client ID:', orderRequest);
       if (paymentMethod === 'VNPAY') {
         await handleVNPayPayment(orderRequest);
       } else if (paymentMethod === 'MOMO') {
@@ -107,6 +173,7 @@ const CheckoutModal = ({ isOpen, onClose, onOrderSuccess }) => {
       alert(`🚫 Xử lý đơn hàng thất bại!\n\n${errorMessage}`);
     } finally {
       setLoading(false);
+      setIsSubmitting(false); // ✅ Reset submitting state
     }
   // hết hàm handleSubmitOrder
   };
@@ -132,8 +199,27 @@ const CheckoutModal = ({ isOpen, onClose, onOrderSuccess }) => {
           totalPrice,
           status,
           customerInfo: formData,
-          items: cartItems
+          items: cartItems,
+          paymentMethod: 'COD' // ✅ Ensure COD is tracked
         });
+      }
+      
+      // ✅ Save order to localStorage with payment method
+      try {
+        const orderHistory = JSON.parse(localStorage.getItem('orderHistory') || '[]');
+        orderHistory.push({
+          orderId,
+          totalPrice,
+          status,
+          paymentMethod: 'COD',
+          customerName: formData.customerName,
+          customerEmail: formData.customerEmail,
+          createdAt: new Date().toISOString()
+        });
+        localStorage.setItem('orderHistory', JSON.stringify(orderHistory));
+        console.log('✅ COD order saved to localStorage with payment method');
+      } catch (error) {
+        console.warn('Warning: Could not save order to localStorage:', error);
       }
       
       // Clear cart and close modal
@@ -172,6 +258,9 @@ Cảm ơn bạn đã đặt hàng! Chúng tôi sẽ liên hệ sớm nhất.`);
   // Xử lý thanh toán VNPay
   const handleVNPayPayment = async (orderRequest) => {
     try {
+      // ✅ Add small delay để tránh duplicate orderId collision
+      await new Promise(resolve => setTimeout(resolve, 50));
+      
       // Bước 1: Tạo đơn hàng trước để có orderId
       console.log('📦 Creating order first for VNPay payment...');
       const orderResponse = await orderService.createOrder(orderRequest);
@@ -186,9 +275,8 @@ Cảm ơn bạn đã đặt hàng! Chúng tôi sẽ liên hệ sớm nhất.`);
       
       // Bước 2: Tạo VNPay payment URL với orderId
       console.log('💳 Creating VNPay payment URL for order:', orderId);
-      const returnUrl = `${window.location.origin}/payment-result`;
       
-      const paymentResponse = await paymentService.createVNPayPayment(orderId, returnUrl);
+      const paymentResponse = await paymentService.createVNPayPayment(orderId);
       console.log('✅ VNPay payment response:', paymentResponse);
       
       // Lưu thông tin order để xử lý sau khi thanh toán
@@ -225,8 +313,13 @@ Cảm ơn bạn đã đặt hàng! Chúng tôi sẽ liên hệ sớm nhất.`);
   // Xử lý thanh toán MoMo
   const handleMoMoPayment = async (orderRequest) => {
     try {
+      // ✅ Add small delay để tránh duplicate orderId collision
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       // Bước 1: Tạo đơn hàng trước để có orderId
       console.log('📦 Creating order first for MoMo payment...');
+      console.log('📦 Order request details:', JSON.stringify(orderRequest, null, 2));
+      
       const orderResponse = await orderService.createOrder(orderRequest);
       console.log('✅ Order created for MoMo:', orderResponse);
       
@@ -239,10 +332,8 @@ Cảm ơn bạn đã đặt hàng! Chúng tôi sẽ liên hệ sớm nhất.`);
       
       // Bước 2: Tạo MoMo payment với orderId
       console.log('📱 Creating MoMo payment for order:', orderId);
-      const returnUrl = `${window.location.origin}/payment-success`;
-      const notifyUrl = `${window.location.origin}/payment-failed`;
       
-      const paymentResponse = await paymentService.createMoMoPayment(orderId, returnUrl, notifyUrl);
+      const paymentResponse = await paymentService.createMoMoPayment(orderId);
       console.log('✅ MoMo payment response:', paymentResponse);
       
       // Lưu thông tin order để xử lý sau khi thanh toán
@@ -272,6 +363,11 @@ Cảm ơn bạn đã đặt hàng! Chúng tôi sẽ liên hệ sớm nhất.`);
       
     } catch (error) {
       console.error('❌ MoMo payment failed:', error);
+      console.error('❌ MoMo error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
       throw new Error(`Lỗi tạo thanh toán MoMo: ${error.message}`);
     }
   };

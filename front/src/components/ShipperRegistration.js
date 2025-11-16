@@ -151,10 +151,10 @@ const ShipperRegistration = ({ isOpen, onClose }) => {
             )}
 
             <div className="form-section">
-              <h3>📋 Thông tin đăng ký</h3>
+              <h3>📝 Thông tin ứng tuyển</h3>
               <p className="section-description">
-                Vui lòng cung cấp thông tin cơ bản để nộp đơn ứng tuyển. 
-                Admin sẽ xem xét và liên hệ với bạn để hoàn tất quy trình.
+                Vui lòng điền đầy đủ thông tin để chúng tôi có thể liên hệ với bạn. 
+                Quá trình phê duyệt sẽ diễn ra trong vòng 24-48 giờ.
               </p>
               
               <div className="form-group">
@@ -188,27 +188,27 @@ const ShipperRegistration = ({ isOpen, onClose }) => {
             </div>
 
             <div className="info-section">
-              <h3>ℹ️ Quy trình phê duyệt</h3>
+              <h3>📋 Quy trình ứng tuyển</h3>
               <div className="process-steps">
                 <div className="step">
                   <div className="step-number">1</div>
                   <div className="step-content">
-                    <h4>Nộp đơn</h4>
-                    <p>Điền thông tin và gửi đơn ứng tuyển</p>
+                    <h4>Điền thông tin</h4>
+                    <p>Nhập họ tên và email liên hệ</p>
                   </div>
                 </div>
                 <div className="step">
                   <div className="step-number">2</div>
                   <div className="step-content">
-                    <h4>Xem xét</h4>
-                    <p>Admin xem xét hồ sơ trong 24-48h</p>
+                    <h4>Đợi đơn duyệt</h4>
+                    <p>Admin xem xét trong 24-48h</p>
                   </div>
                 </div>
                 <div className="step">
                   <div className="step-number">3</div>
                   <div className="step-content">
-                    <h4>Phản hồi</h4>
-                    <p>Nhận kết quả phê duyệt qua email</p>
+                    <h4>Kiểm tra email</h4>
+                    <p>Nhận thông báo kết quả qua email</p>
                   </div>
                 </div>
               </div>

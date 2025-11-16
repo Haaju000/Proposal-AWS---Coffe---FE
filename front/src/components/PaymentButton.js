@@ -135,14 +135,9 @@ const PaymentButton = ({
       console.log('✅ Order created with ID:', newOrderId);
 
       // Create VNPay payment - Backend will handle callback and redirect to frontend
-      const paymentRequest = {
-        orderId: newOrderId
-        // No returnUrl needed - backend will auto-redirect to frontend
-      };
+      console.log('🚀 Creating VNPay payment for order:', newOrderId);
       
-      console.log('🚀 Creating VNPay payment:', paymentRequest);
-      
-      const paymentResponse = await paymentService.createVNPayPayment(paymentRequest);
+      const paymentResponse = await paymentService.createVNPayPayment(newOrderId);
       
       if (paymentResponse.success && paymentResponse.paymentUrl) {
         console.log('✅ VNPay URL created:', paymentResponse.paymentUrl);
@@ -245,12 +240,7 @@ const PaymentButton = ({
             try {
                 setLoading(true);
 
-                const paymentRequest = {
-                    orderId: orderId
-                    // No returnUrl needed - backend will auto-redirect to frontend
-                };
-
-                const response = await paymentService.createVNPayPayment(paymentRequest);
+                const response = await paymentService.createVNPayPayment(orderId);
 
                 if (response.success && response.paymentUrl) {
                     localStorage.setItem('pendingPaymentOrderId', orderId);

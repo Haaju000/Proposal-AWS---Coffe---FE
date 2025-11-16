@@ -211,11 +211,13 @@
   font-weight: 600;
 }
 
-.form-group {
+.checkout-modal-overlay .form-group {
   margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
 }
 
-.form-group label {
+.checkout-modal-overlay .form-group label {
   display: block;
   margin-bottom: 6px;
   font-weight: 600;
@@ -223,42 +225,88 @@
   font-size: 0.875rem;
 }
 
-.form-group input,
-.form-group textarea {
-  width: 100%;
-  padding: 12px 16px;
-  border: 2px solid #E5E7EB;
-  border-radius: 8px;
-  font-size: 1rem;
-  transition: all 0.2s ease;
-  font-family: inherit;
-  box-sizing: border-box;
+/* Critical: Prevent input expansion in checkout modal */
+.checkout-modal-overlay .form-group input[type="text"],
+.checkout-modal-overlay .form-group input[type="email"],
+.checkout-modal-overlay .form-group input[type="tel"] {
+  width: 100% !important;
+  height: 48px !important;
+  min-height: 48px !important;
+  max-height: 48px !important;
+  padding: 12px 16px !important;
+  border: 2px solid #E5E7EB !important;
+  border-radius: 8px !important;
+  font-size: 1rem !important;
+  transition: all 0.2s ease !important;
+  font-family: inherit !important;
+  box-sizing: border-box !important;
+  resize: none !important;
+  overflow: hidden !important;
+  white-space: nowrap !important;
+  text-overflow: ellipsis !important;
+  line-height: 1.2 !important;
 }
 
-.form-group input:focus,
-.form-group textarea:focus {
-  outline: none;
-  border-color: #8B4513;
-  box-shadow: 0 0 0 3px rgba(139, 69, 19, 0.1);
+.checkout-modal-overlay .form-group textarea {
+  width: 100% !important;
+  padding: 12px 16px !important;
+  border: 2px solid #E5E7EB !important;
+  border-radius: 8px !important;
+  font-size: 1rem !important;
+  transition: all 0.2s ease !important;
+  font-family: inherit !important;
+  box-sizing: border-box !important;
+  resize: vertical !important;
+  min-height: 80px !important;
+  max-height: 150px !important;
+  line-height: 1.4 !important;
 }
 
-.form-group input.error,
-.form-group textarea.error {
-  border-color: #EF4444;
-  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+.checkout-modal-overlay .form-group input:focus,
+.checkout-modal-overlay .form-group textarea:focus {
+  outline: none !important;
+  border-color: #8B4513 !important;
+  box-shadow: 0 0 0 3px rgba(139, 69, 19, 0.1) !important;
 }
 
-.error-text {
+/* Error state - maintain size */
+.checkout-modal-overlay .form-group input.error,
+.checkout-modal-overlay .form-group textarea.error {
+  border-color: #EF4444 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1) !important;
+}
+
+/* Specific error state for text inputs - prevent expansion */
+.checkout-modal-overlay .form-group input[type="text"].error,
+.checkout-modal-overlay .form-group input[type="email"].error,
+.checkout-modal-overlay .form-group input[type="tel"].error {
+  width: 100% !important;
+  height: 48px !important;
+  min-height: 48px !important;
+  max-height: 48px !important;
+  animation: shakeInput 0.4s ease-in-out !important;
+}
+
+.checkout-modal-overlay .error-text {
   display: block;
   margin-top: 4px;
   color: #EF4444;
   font-size: 0.875rem;
   font-weight: 500;
+  min-height: 20px; /* Reserve space for error messages */
 }
 
-.form-group textarea {
-  resize: vertical;
-  min-height: 80px;
+/* Animation for input shake */
+@keyframes shakeInput {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-2px);
+  }
+  75% {
+    transform: translateX(2px);
+  }
 }
 
 /* Modal Footer */

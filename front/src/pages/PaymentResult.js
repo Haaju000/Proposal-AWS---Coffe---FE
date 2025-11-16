@@ -41,17 +41,186 @@ const PaymentResult = () => {
                 console.log(`${key}: ${value}`);
             }
             
-            // Detect payment method from URL
-            const isVNPayCallback = window.location.pathname.includes('/payment-result') && 
-                                   (urlParams.has('vnp_ResponseCode') || urlParams.has('vnp_TxnRef'));
-            const isMoMoSuccess = window.location.pathname.includes('/payment-success');
-            const isMoMoFailed = window.location.pathname.includes('/payment-failed');
+            // Detect payment method from URL - Fixed logic
+            const hasVNPayParams = urlParams.has('vnp_ResponseCode') || urlParams.has('vnp_TxnRef') || urlParams.has('bankCode') || urlParams.has('transactionId');
+            
+            // ✅ Check localStorage for payment method context
+            const vnpayOrderData = localStorage.getItem('vnpayOrderData');
+            const momoOrderData = localStorage.getItem('momoOrderData');
+            const isVNPayFromStorage = vnpayOrderData && JSON.parse(vnpayOrderData).paymentMethod === 'VNPAY';
+            const isMoMoFromStorage = momoOrderData && JSON.parse(momoOrderData).paymentMethod === 'MOMO';
+            
+            console.log('Payment method detection from storage:', {
+                vnpayOrderData: !!vnpayOrderData,
+                momoOrderData: !!momoOrderData,
+                isVNPayFromStorage,
+                isMoMoFromStorage
+            });
+            
+            // Enhanced detection logic
+            const hasMoMoParams = urlParams.has('orderId') && !hasVNPayParams && !isVNPayFromStorage;
+            
+            const isVNPayCallback = (window.location.pathname.includes('/payment-result') || 
+                                   window.location.pathname.includes('/payment-success') ||
+                                   window.location.pathname.includes('/payment-failed')) && 
+                                   (hasVNPayParams || isVNPayFromStorage);
+            const isMoMoSuccess = window.location.pathname.includes('/payment-success') && 
+                                (hasMoMoParams || isMoMoFromStorage) && !isVNPayFromStorage;
+            const isMoMoFailed = window.location.pathname.includes('/payment-failed') && 
+                               (hasMoMoParams || isMoMoFromStorage) && !isVNPayFromStorage;
             
             console.log('Payment method detection:', {
-                isVNPayCallback, isMoMoSuccess, isMoMoFailed
+                isVNPayCallback, isMoMoSuccess, isMoMoFailed, hasVNPayParams, hasMoMoParams,
+                isVNPayFromStorage, isMoMoFromStorage,
+                currentPath: window.location.pathname,
+                currentParams: window.location.search
             });
 
-            // ✅ Priority 1: Handle MoMo Success Redirect
+            // ✅ Priority 1: Handle VNPay Callback (check first!)
+            if (isVNPayCallback) {
+                console.log('💳 Processing VNPay callback');
+                
+                // Handle VNPay redirect from backend (new format)
+                if (window.location.pathname.includes('/payment-success') || window.location.pathname.includes('/payment-failed')) {
+                    const orderId = urlParams.get('orderId');
+                    const amount = urlParams.get('amount'); 
+                    const transactionId = urlParams.get('transactionId');
+                    const bankCode = urlParams.get('bankCode');
+                    const message = urlParams.get('message');
+                    
+                    console.log('VNPay backend redirect params:', {
+                        orderId, amount, transactionId, bankCode, message
+                    });
+                    
+                    if (window.location.pathname.includes('/payment-success')) {
+                        // VNPay success redirect from backend
+                        setPaymentStatus('success');
+                        
+                        // ✅ Get payment method from localStorage
+                        let paymentMethodFromStorage = 'VNPay'; // Default
+                        try {
+                            const vnpayData = localStorage.getItem('vnpayOrderData');
+                            if (vnpayData) {
+                                const parsed = JSON.parse(vnpayData);
+                                paymentMethodFromStorage = parsed.paymentMethod || 'VNPay';
+                                // Clean up localStorage after use
+                                localStorage.removeItem('vnpayOrderData');
+                            }
+                        } catch (error) {
+                            console.warn('Error parsing vnpayOrderData:', error);
+                        }
+                        
+                        setPaymentDetails({
+                            orderId: orderId,
+                            transactionRef: transactionId || orderId,
+                            amount: amount ? parseFloat(amount) : 0,
+                            paymentDate: new Date(),
+                            status: 'Processing',
+                            bankCode: bankCode,
+                            paymentMethod: paymentMethodFromStorage, // ✅ Use from localStorage
+                            message: 'Thanh toán VNPay thành công'
+                        });
+
+                        // Update order history
+                        try {
+                            const orderHistory = JSON.parse(localStorage.getItem('orderHistory') || '[]');
+                            const orderIndex = orderHistory.findIndex(o => o.orderId === orderId);
+                            
+                            if (orderIndex !== -1) {
+                                orderHistory[orderIndex].status = 'Processing';
+                                orderHistory[orderIndex].paymentDate = new Date().toISOString();
+                                localStorage.setItem('orderHistory', JSON.stringify(orderHistory));
+                                console.log('✅ Updated order status to Processing via VNPay redirect');
+                            }
+                        } catch (error) {
+                            console.warn('Warning: Could not update order history:', error);
+                        }
+                    } else {
+                        // VNPay failed redirect from backend
+                        setPaymentStatus('failed');
+                        setPaymentDetails({
+                            orderId: orderId || 'Unknown',
+                            message: decodeURIComponent(message || 'Thanh toán VNPay thất bại'),
+                            paymentMethod: 'VNPay'
+                        });
+                    }
+                    
+                    setLoading(false);
+                    return;
+                }
+                
+                // Handle direct VNPay callback (legacy format with vnp_ params)
+                const vnp_OrderId = urlParams.get('vnp_TxnRef');
+                const vnp_ResponseCode = urlParams.get('vnp_ResponseCode');
+                const vnp_Amount = urlParams.get('vnp_Amount');
+                const vnp_PayDate = urlParams.get('vnp_PayDate');
+                const vnp_TransactionNo = urlParams.get('vnp_TransactionNo');
+                const vnp_BankCode = urlParams.get('vnp_BankCode');
+
+                console.log('VNPay direct callback params:', {
+                    vnp_OrderId, vnp_ResponseCode, vnp_Amount, vnp_PayDate, vnp_TransactionNo, vnp_BankCode
+                });
+
+                if (vnp_ResponseCode && vnp_OrderId) {
+                    try {
+                        if (vnp_ResponseCode === '00') {
+                            // VNPay success
+                            setPaymentStatus('success');
+                            setPaymentDetails({
+                                orderId: vnp_OrderId,
+                                transactionRef: vnp_TransactionNo || vnp_OrderId,
+                                amount: vnp_Amount ? parseInt(vnp_Amount) / 100 : 0,
+                                paymentDate: vnp_PayDate ? 
+                                    new Date(
+                                        vnp_PayDate.slice(0, 4) + '-' + 
+                                        vnp_PayDate.slice(4, 6) + '-' + 
+                                        vnp_PayDate.slice(6, 8) + ' ' + 
+                                        vnp_PayDate.slice(8, 10) + ':' + 
+                                        vnp_PayDate.slice(10, 12) + ':' + 
+                                        vnp_PayDate.slice(12, 14)
+                                    ) : new Date(),
+                                status: 'Processing',
+                                bankCode: vnp_BankCode,
+                                paymentMethod: 'VNPay',
+                                message: 'Thanh toán VNPay thành công'
+                            });
+
+                            // Update order history for VNPay
+                            try {
+                                const orderHistory = JSON.parse(localStorage.getItem('orderHistory') || '[]');
+                                const orderIndex = orderHistory.findIndex(o => o.orderId === vnp_OrderId);
+                                
+                                if (orderIndex !== -1) {
+                                    orderHistory[orderIndex].status = 'Processing';
+                                    orderHistory[orderIndex].paymentDate = new Date().toISOString();
+                                    localStorage.setItem('orderHistory', JSON.stringify(orderHistory));
+                                    console.log('✅ Updated order status to Processing via VNPay callback');
+                                }
+                            } catch (error) {
+                                console.warn('Warning: Could not update order history:', error);
+                            }
+                        } else {
+                            // VNPay failed
+                            setPaymentStatus('failed');
+                            setPaymentDetails({
+                                orderId: vnp_OrderId,
+                                transactionRef: vnp_TransactionNo || vnp_OrderId,
+                                responseCode: vnp_ResponseCode,
+                                message: getErrorMessage(vnp_ResponseCode),
+                                paymentMethod: 'VNPay'
+                            });
+                        }
+                    } catch (error) {
+                        console.error('Error processing VNPay result:', error);
+                        setPaymentStatus('error');
+                    }
+                }
+                
+                setLoading(false);
+                return;
+            }
+
+            // ✅ Priority 2: Handle MoMo Success Redirect
             if (isMoMoSuccess) {
                 console.log('✅ Processing MoMo success redirect');
                 
@@ -61,6 +230,21 @@ const PaymentResult = () => {
                 
                 if (orderId) {
                     setPaymentStatus('success');
+                    
+                    // ✅ Get payment method from localStorage 
+                    let paymentMethodFromStorage = 'MoMo'; // Default
+                    try {
+                        const momoData = localStorage.getItem('momoOrderData');
+                        if (momoData) {
+                            const parsed = JSON.parse(momoData);
+                            paymentMethodFromStorage = parsed.paymentMethod || 'MoMo';
+                            // Clean up localStorage after use
+                            localStorage.removeItem('momoOrderData');
+                        }
+                    } catch (error) {
+                        console.warn('Error parsing momoOrderData:', error);
+                    }
+                    
                     setPaymentDetails({
                         orderId: orderId,
                         transactionRef: transactionId || orderId,
@@ -68,7 +252,7 @@ const PaymentResult = () => {
                         paymentDate: new Date(),
                         status: 'Processing',
                         message: 'Thanh toán MoMo thành công',
-                        paymentMethod: 'MoMo'
+                        paymentMethod: paymentMethodFromStorage // ✅ Use from localStorage
                     });
 
                     // Update order history
@@ -98,6 +282,13 @@ const PaymentResult = () => {
                 const orderId = urlParams.get('orderId');
                 const message = urlParams.get('message');
                 
+                // ✅ Clean up localStorage for failed MoMo payment
+                try {
+                    localStorage.removeItem('momoOrderData');
+                } catch (error) {
+                    console.warn('Error cleaning momoOrderData:', error);
+                }
+                
                 setPaymentStatus('failed');
                 setPaymentDetails({
                     orderId: orderId || 'Unknown',
@@ -113,6 +304,60 @@ const PaymentResult = () => {
             if (isVNPayCallback) {
                 console.log('💳 Processing VNPay callback');
                 
+                // Handle VNPay redirect from backend (new format)
+                if (window.location.pathname.includes('/payment-success') || window.location.pathname.includes('/payment-failed')) {
+                    const orderId = urlParams.get('orderId');
+                    const amount = urlParams.get('amount'); 
+                    const transactionId = urlParams.get('transactionId');
+                    const bankCode = urlParams.get('bankCode');
+                    const message = urlParams.get('message');
+                    
+                    console.log('VNPay backend redirect params:', {
+                        orderId, amount, transactionId, bankCode, message
+                    });
+                    
+                    if (window.location.pathname.includes('/payment-success')) {
+                        // VNPay success redirect from backend
+                        setPaymentStatus('success');
+                        setPaymentDetails({
+                            orderId: orderId,
+                            transactionRef: transactionId || orderId,
+                            amount: amount ? parseFloat(amount) : 0,
+                            paymentDate: new Date(),
+                            status: 'Processing',
+                            bankCode: bankCode,
+                            paymentMethod: 'VNPay'
+                        });
+
+                        // Update order history
+                        try {
+                            const orderHistory = JSON.parse(localStorage.getItem('orderHistory') || '[]');
+                            const orderIndex = orderHistory.findIndex(o => o.orderId === orderId);
+                            
+                            if (orderIndex !== -1) {
+                                orderHistory[orderIndex].status = 'Processing';
+                                orderHistory[orderIndex].paymentDate = new Date().toISOString();
+                                localStorage.setItem('orderHistory', JSON.stringify(orderHistory));
+                                console.log('✅ Updated order status to Processing via VNPay redirect');
+                            }
+                        } catch (error) {
+                            console.warn('Warning: Could not update order history:', error);
+                        }
+                    } else {
+                        // VNPay failed redirect from backend
+                        setPaymentStatus('failed');
+                        setPaymentDetails({
+                            orderId: orderId || 'Unknown',
+                            message: decodeURIComponent(message || 'Thanh toán VNPay thất bại'),
+                            paymentMethod: 'VNPay'
+                        });
+                    }
+                    
+                    setLoading(false);
+                    return;
+                }
+                
+                // Handle direct VNPay callback (legacy format with vnp_ params)
                 const vnp_OrderId = urlParams.get('vnp_TxnRef');
                 const vnp_ResponseCode = urlParams.get('vnp_ResponseCode');
                 const vnp_Amount = urlParams.get('vnp_Amount');
@@ -120,7 +365,7 @@ const PaymentResult = () => {
                 const vnp_TransactionNo = urlParams.get('vnp_TransactionNo');
                 const vnp_BankCode = urlParams.get('vnp_BankCode');
 
-                console.log('VNPay callback params:', {
+                console.log('VNPay direct callback params:', {
                     vnp_OrderId, vnp_ResponseCode, vnp_Amount, vnp_PayDate, vnp_TransactionNo, vnp_BankCode
                 });
 
@@ -430,7 +675,7 @@ const PaymentResult = () => {
                                     <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                                     <rect x="8" y="2" width="8" height="4" rx="1" ry="1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                                 </svg>
-                                Xem đơn hàng của tôi
+                                Xem đơn hàng
                             </button>
                             <button className="btn btn-secondary" onClick={handleBackToMenu}>
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -499,7 +744,7 @@ const PaymentResult = () => {
                                     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                                     <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                                 </svg>
-                                Thử lại thanh toán
+                                Quay về menu
                             </button>
                             <button className="btn btn-secondary" onClick={() => window.location.href = '/contact'}>
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">

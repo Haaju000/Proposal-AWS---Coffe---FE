@@ -451,6 +451,7 @@ const Menu = () => {
                     {category.key === 'All' && '🍽️'}
                     {category.key === 'Drink' && '☕'}
                     {category.key === 'Pastries' && '🥐'}
+                    {category.key === 'Toppings' && '🍮'}
                   </span>
                   {category.label}
                 </button>
