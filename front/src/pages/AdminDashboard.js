@@ -49,6 +49,54 @@ const AdminDashboard = () => {
   // Confirmation modal state
   const [confirmModal, setConfirmModal] = useState(null);
 
+  // Shared data states for overview
+  const [sharedData, setSharedData] = useState({
+    products: [],
+    orders: [],
+    customers: [],
+    shippers: [],
+    pendingShippers: []
+  });
+
+  // Load shared data on component mount
+  useEffect(() => {
+    const loadSharedData = async () => {
+      try {
+        const [
+          allShippers,
+          pendingShippers,
+          allCustomers
+        ] = await Promise.all([
+          shipperService.getAllShippers().catch(() => []),
+          shipperService.getPendingShippers().catch(() => []),
+          customerService.getAllCustomers().catch(() => [])
+        ]);
+
+        // Load products từ cả drinks và cakes
+        const [drinks, cakes, toppings] = await Promise.all([
+          drinkService.getAllDrinks().catch(() => []),
+          cakeService.getAllCakes().catch(() => []),
+          toppingService.getAllToppings().catch(() => [])
+        ]);
+
+        // Load orders
+        const orders = await orderService.getAllOrders().catch(() => []);
+
+        setSharedData({
+          products: [...drinks, ...cakes, ...toppings],
+          orders: orders,
+          customers: allCustomers,
+          shippers: allShippers,
+          pendingShippers: pendingShippers
+        });
+      } catch (error) {
+        console.log('Could not load shared data:', error);
+      }
+    };
+
+    loadSharedData();
+  }, []);
+
   // Notification system functions
   const showNotification = (title, message, type = 'info', duration = 4000) => {
     const id = Date.now() + Math.random();
@@ -153,7 +201,15 @@ const AdminDashboard = () => {
   const renderContent = () => {
     switch (activeSection) {
       case 'overview':
-        return <OverviewContent />;
+        return (
+          <OverviewContent 
+            allProducts={sharedData.products}
+            allOrders={sharedData.orders}
+            allCustomers={sharedData.customers}
+            allShippers={sharedData.shippers}
+            pendingShippers={sharedData.pendingShippers}
+          />
+        );
       case 'products':
         return <ProductsContent showNotification={showNotification} showConfirmModal={showConfirmModal} />;
       case 'orders':
@@ -165,7 +221,15 @@ const AdminDashboard = () => {
       case 'promotions':
         return <PromotionsContent />;
       default:
-        return <OverviewContent />;
+        return (
+          <OverviewContent 
+            allProducts={sharedData.products}
+            allOrders={sharedData.orders}
+            allCustomers={sharedData.customers}
+            allShippers={sharedData.shippers}
+            pendingShippers={sharedData.pendingShippers}
+          />
+        );
     }
   };
 
@@ -287,48 +351,88 @@ const AdminDashboard = () => {
 };
 
 // Content Components
-const OverviewContent = () => {
+const OverviewContent = ({ 
+  allProducts = [], 
+  allOrders = [], 
+  allCustomers = [], 
+  allShippers = [], 
+  pendingShippers = [] 
+}) => {
   const [overviewStats, setOverviewStats] = useState({
-    totalRevenue: 2450000,
-    todayOrders: 45,
-    totalProducts: 28,
-    totalCustomers: 234,
+    totalRevenue: 0,
+    todayOrders: 0,
+    totalProducts: 0,
+    totalCustomers: 0,
     totalShippers: 0,
-    pendingShippers: 0
+    pendingShippers: 0,
+    completedOrders: 0,
+    activeOrders: 0,
+    avgOrderValue: 0,
+    topProduct: 'N/A'
   });
 
   useEffect(() => {
-    // Load overview statistics
-    const loadOverviewStats = async () => {
-      try {
-        // Load shipper stats
-        const [allShippers, pendingShippers] = await Promise.all([
-          shipperService.getAllShippers().catch(() => []),
-          shipperService.getPendingShippers().catch(() => [])
-        ]);
-        
-        setOverviewStats(prev => ({
-          ...prev,
-          totalShippers: allShippers.length,
-          pendingShippers: pendingShippers.length
-        }));
-      } catch (error) {
-        console.log('Could not load shipper stats:', error);
-      }
+    // Tính toán stats từ dữ liệu thực
+    const calculateStats = () => {
+      const today = new Date().toDateString();
+      
+      // Lọc đơn hàng hôm nay
+      const todayOrders = allOrders.filter(order => 
+        new Date(order.createdAt || order.orderDate || Date.now()).toDateString() === today
+      );
+      
+      // Tính tổng doanh thu từ đơn hàng hoàn thành
+      const completedOrders = allOrders.filter(order => 
+        order.status === 'completed' || order.status === 'delivered'
+      );
+      
+      const totalRevenue = completedOrders.reduce((sum, order) => 
+        sum + (order.totalAmount || order.total || 0), 0
+      );
+      
+      // Tính đơn hàng đang xử lý
+      const activeOrders = allOrders.filter(order => 
+        order.status === 'pending' || order.status === 'processing' || order.status === 'confirmed'
+      ).length;
+      
+      // Tính giá trị đơn hàng trung bình
+      const avgOrderValue = completedOrders.length > 0 
+        ? totalRevenue / completedOrders.length 
+        : 0;
+      
+      // Tìm sản phẩm phổ biến nhất (giả sử)
+      const topProduct = allProducts.length > 0 
+        ? allProducts[0]?.name || 'N/A' 
+        : 'N/A';
+
+      setOverviewStats({
+        totalRevenue,
+        todayOrders: todayOrders.length,
+        totalProducts: allProducts.length,
+        totalCustomers: allCustomers.length,
+        totalShippers: allShippers.length,
+        pendingShippers: pendingShippers.length,
+        completedOrders: completedOrders.length,
+        activeOrders,
+        avgOrderValue,
+        topProduct
+      });
     };
 
-    loadOverviewStats();
-  }, []);
+    calculateStats();
+  }, [allProducts, allOrders, allCustomers, allShippers, pendingShippers]);
 
   return (
     <div className="overview-content">
       <div className="stats-grid">
         <div className="stat-card">
-          <div className="stat-icon">📊</div>
+          <div className="stat-icon">💰</div>
           <div className="stat-info">
             <h3>Tổng doanh thu</h3>
             <p className="stat-value">₫{overviewStats.totalRevenue.toLocaleString('vi-VN')}</p>
-            <span className="stat-change positive">+12.5%</span>
+            <span className="stat-change positive">
+              {overviewStats.completedOrders} đơn hoàn thành
+            </span>
           </div>
         </div>
         <div className="stat-card">
@@ -336,7 +440,9 @@ const OverviewContent = () => {
           <div className="stat-info">
             <h3>Đơn hàng hôm nay</h3>
             <p className="stat-value">{overviewStats.todayOrders}</p>
-            <span className="stat-change positive">+5</span>
+            <span className="stat-change positive">
+              {overviewStats.activeOrders} đang xử lý
+            </span>
           </div>
         </div>
         <div className="stat-card">
@@ -344,7 +450,9 @@ const OverviewContent = () => {
           <div className="stat-info">
             <h3>Sản phẩm</h3>
             <p className="stat-value">{overviewStats.totalProducts}</p>
-            <span className="stat-change">Hoạt động</span>
+            <span className="stat-change">
+              Phổ biến: {overviewStats.topProduct}
+            </span>
           </div>
         </div>
         <div className="stat-card">
@@ -352,7 +460,9 @@ const OverviewContent = () => {
           <div className="stat-info">
             <h3>Khách hàng</h3>
             <p className="stat-value">{overviewStats.totalCustomers}</p>
-            <span className="stat-change positive">+8 mới</span>
+            <span className="stat-change positive">
+              TB: ₫{Math.round(overviewStats.avgOrderValue).toLocaleString('vi-VN')}
+            </span>
           </div>
         </div>
         <div className="stat-card">
@@ -360,7 +470,12 @@ const OverviewContent = () => {
           <div className="stat-info">
             <h3>Shipper</h3>
             <p className="stat-value">{overviewStats.totalShippers}</p>
-            <span className="stat-change warning">{overviewStats.pendingShippers} chờ duyệt</span>
+            <span className={`stat-change ${overviewStats.pendingShippers > 0 ? 'warning' : ''}`}>
+              {overviewStats.pendingShippers > 0 
+                ? `${overviewStats.pendingShippers} chờ duyệt` 
+                : 'Tất cả hoạt động'
+              }
+            </span>
           </div>
         </div>
       </div>
@@ -368,33 +483,65 @@ const OverviewContent = () => {
       <div className="recent-activities">
         <h3>Hoạt động gần đây</h3>
         <div className="activity-list">
-          <div className="activity-item">
-            <span className="activity-icon">📋</span>
-            <div className="activity-info">
-              <p>Đơn hàng #001 đã được tạo</p>
-              <small>5 phút trước</small>
+          {/* Hiển thị đơn hàng gần đây */}
+          {allOrders.slice(0, 3).map((order, index) => (
+            <div key={`order-${index}`} className="activity-item">
+              <span className="activity-icon">📋</span>
+              <div className="activity-info">
+                <p>Đơn hàng #{order.id || order.orderNumber || `00${index + 1}`} được tạo</p>
+                <small>
+                  Giá trị: ₫{(order.totalAmount || order.total || 0).toLocaleString('vi-VN')} - 
+                  Trạng thái: {order.status === 'pending' ? 'Chờ xử lý' : 
+                            order.status === 'completed' ? 'Hoàn thành' : 
+                            order.status === 'processing' ? 'Đang xử lý' : order.status}
+                </small>
+              </div>
             </div>
-          </div>
-          <div className="activity-item">
-            <span className="activity-icon">☕</span>
-            <div className="activity-info">
-              <p>Sản phẩm "Latte" đã được cập nhật</p>
-              <small>10 phút trước</small>
+          ))}
+          
+          {/* Hiển thị sản phẩm được cập nhật gần đây */}
+          {allProducts.slice(0, 2).map((product, index) => (
+            <div key={`product-${index}`} className="activity-item">
+              <span className="activity-icon">☕</span>
+              <div className="activity-info">
+                <p>Sản phẩm "{product.name}" được cập nhật</p>
+                <small>
+                  Giá: ₫{(product.price || 0).toLocaleString('vi-VN')} - 
+                  Loại: {product.type === 'drink' ? 'Đồ uống' : 'Bánh'}
+                </small>
+              </div>
             </div>
-          </div>
-          <div className="activity-item">
-            <span className="activity-icon">👥</span>
-            <div className="activity-info">
-              <p>Khách hàng mới đăng ký</p>
-              <small>15 phút trước</small>
+          ))}
+          
+          {/* Hiển thị khách hàng mới */}
+          {allCustomers.slice(-2).map((customer, index) => (
+            <div key={`customer-${index}`} className="activity-item">
+              <span className="activity-icon">👥</span>
+              <div className="activity-info">
+                <p>Khách hàng mới: {customer.name || customer.username}</p>
+                <small>Email: {customer.email}</small>
+              </div>
             </div>
-          </div>
-          {overviewStats.pendingShippers > 0 && (
-            <div className="activity-item">
+          ))}
+          
+          {/* Hiển thị shipper chờ duyệt nếu có */}
+          {pendingShippers.slice(0, 1).map((shipper, index) => (
+            <div key={`shipper-${index}`} className="activity-item">
               <span className="activity-icon">🚚</span>
               <div className="activity-info">
-                <p>{overviewStats.pendingShippers} shipper đang chờ phê duyệt</p>
-                <small>Cần xử lý</small>
+                <p>Shipper "{shipper.name}" chờ phê duyệt</p>
+                <small>SĐT: {shipper.phone} - Khu vực: {shipper.area}</small>
+              </div>
+            </div>
+          ))}
+          
+          {/* Fallback nếu không có dữ liệu */}
+          {allOrders.length === 0 && allProducts.length === 0 && allCustomers.length === 0 && (
+            <div className="activity-item">
+              <span className="activity-icon">📝</span>
+              <div className="activity-info">
+                <p>Chưa có hoạt động nào</p>
+                <small>Dữ liệu sẽ hiển thị khi có thông tin từ hệ thống</small>
               </div>
             </div>
           )}
@@ -945,6 +1092,79 @@ const OrdersContent = ({ showNotification }) => {
   const [activeStatus, setActiveStatus] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [updating, setUpdating] = useState({});
+  const [userCache, setUserCache] = useState({}); // Cache user info để tránh call API nhiều lần
+
+  // Fetch user info từ userId (với caching)
+  const fetchUserInfo = async (userId) => {
+    if (!userId) return null;
+    
+    // Check cache first
+    if (userCache[userId]) {
+      return userCache[userId];
+    }
+    
+    try {
+      console.log(`👤 Fetching user info for: ${userId}`);
+      const userInfo = await customerService.getCustomerById(userId);
+      
+      // Cache the result
+      setUserCache(prev => ({
+        ...prev,
+        [userId]: userInfo
+      }));
+      
+      console.log(`✅ User info fetched:`, userInfo);
+      return userInfo;
+    } catch (error) {
+      console.error(`❌ Error fetching user ${userId}:`, error);
+      // Cache empty result to avoid repeated API calls
+      setUserCache(prev => ({
+        ...prev,
+        [userId]: null
+      }));
+      return null;
+    }
+  };
+
+  // Fetch user info cho tất cả orders
+  const fetchUsersForOrders = async (orders) => {
+    const userIds = [...new Set(orders.map(order => order.userId).filter(id => id))];
+    console.log(`👥 Fetching user info for ${userIds.length} unique users:`, userIds);
+    
+    // Fetch user info for all unique userIds
+    await Promise.all(
+      userIds.map(userId => fetchUserInfo(userId))
+    );
+  };
+
+  // Get user display info (từ cache hoặc fallback)
+  const getUserDisplayInfo = (order) => {
+    // Priority 1: Customer info từ checkout form
+    if (order.customerName && order.customerEmail) {
+      return {
+        name: order.customerName,
+        email: order.customerEmail,
+        phone: order.deliveryPhone
+      };
+    }
+    
+    // Priority 2: User info từ database
+    if (order.userId && userCache[order.userId]) {
+      const user = userCache[order.userId];
+      return {
+        name: user.username || user.email,
+        email: user.email,
+        phone: user.phoneNumber || order.deliveryPhone
+      };
+    }
+    
+    // Priority 3: Fallback to userId
+    return {
+      name: order.userId || 'Không có tên',
+      email: order.userId || 'Không có email',
+      phone: order.deliveryPhone || 'Không có SĐT'
+    };
+  };
 
   // Helper function to get status text in Vietnamese
   const getStatusText = (status) => {
@@ -968,7 +1188,24 @@ const OrdersContent = ({ showNotification }) => {
       // ✅ Use getAllOrders for admin (GET /api/Order)
       const response = await orderService.getAllOrders();
       console.log('✅ Admin orders loaded:', response);
+      
+      // 🔍 Debug: Log sample order to check data structure
+      if (response && response.length > 0) {
+        console.log('📋 Sample order data structure:', {
+          orderId: response[0].orderId,
+          customerName: response[0].customerName,
+          customerEmail: response[0].customerEmail,
+          userId: response[0].userId,
+          deliveryPhone: response[0].deliveryPhone,
+          hasCustomerInfo: !!(response[0].customerName && response[0].customerEmail)
+        });
+      }
+      
       setOrders(response || []);
+      
+      // 👥 Fetch user info for all orders
+      await fetchUsersForOrders(response || []);
+      
       setError(null);
     } catch (err) {
       console.error('❌ Error fetching admin orders:', err);
@@ -1005,7 +1242,7 @@ const OrdersContent = ({ showNotification }) => {
     }
   };
 
-  // Computed properties
+  // Computed properties với sắp xếp ưu tiên
   const orderCounts = {
     all: orders.length,
     pending: orders.filter(o => o.status?.toLowerCase() === 'pending').length,
@@ -1013,18 +1250,39 @@ const OrdersContent = ({ showNotification }) => {
     completed: orders.filter(o => o.status?.toLowerCase() === 'completed').length
   };
 
-  const filteredOrders = orders.filter(order => {
-    const matchesStatus = activeStatus === 'all' || order.status?.toLowerCase() === activeStatus;
-    const matchesSearch = searchTerm === '' || 
-      order.orderId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.userId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.appliedVoucherCode?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.items?.some(item => 
-        item.productName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.name?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    return matchesStatus && matchesSearch;
-  });
+  // Sắp xếp đơn hàng: ưu tiên processing, sau đó completed, cuối cùng pending
+  const getSortPriority = (status) => {
+    const priorities = {
+      'processing': 1,
+      'completed': 2,  
+      'pending': 3
+    };
+    return priorities[status?.toLowerCase()] || 4;
+  };
+
+  const filteredOrders = orders
+    .filter(order => {
+      const matchesStatus = activeStatus === 'all' || order.status?.toLowerCase() === activeStatus;
+      const matchesSearch = searchTerm === '' || 
+        order.orderId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        order.userId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        order.appliedVoucherCode?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        order.items?.some(item => 
+          item.productName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          item.name?.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+      return matchesStatus && matchesSearch;
+    })
+    .sort((a, b) => {
+      // Ưu tiên sắp xếp theo status trước
+      const statusDiff = getSortPriority(a.status) - getSortPriority(b.status);
+      if (statusDiff !== 0) return statusDiff;
+      
+      // Sau đó sắp xếp theo thời gian (mới nhất trước)
+      const aDate = new Date(a.createdAt || 0);
+      const bDate = new Date(b.createdAt || 0);
+      return bDate - aDate;
+    });
 
   if (loading) {
     return (
@@ -1054,21 +1312,23 @@ const OrdersContent = ({ showNotification }) => {
 
   return (
     <div className="orders-content">
+      {/* Header với search và refresh */}
       <div className="content-header">
         <div className="header-title">
           <FiShoppingBag size={24} />
           <h2>Quản lý đơn hàng</h2>
+          <span className="total-orders">({orders.length} đơn hàng)</span>
         </div>
         
-        {/* ✅ Search Bar */}
-        <div className="search-section">
+        <div className="header-actions">
           <div className="search-box">
             <FiSearch size={16} />
             <input
               type="text"
-              placeholder="Tìm theo mã đơn hàng hoặc ID khách hàng..."
+              placeholder="Tìm kiếm theo mã đơn hàng, tên khách hàng..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              className="search-input"
             />
           </div>
           <button onClick={fetchOrders} className="refresh-btn">
@@ -1078,40 +1338,40 @@ const OrdersContent = ({ showNotification }) => {
         </div>
       </div>
 
-      {/* ✅ Status Filter Tabs */}
-      <div className="filter-tabs">
+      {/* Status Filter Tabs - Coffee theme */}
+      <div className="status-filter-tabs">
         <button 
-          className={`tab ${activeStatus === 'all' ? 'active' : ''}`}
+          className={`status-tab ${activeStatus === 'all' ? 'active' : ''}`}
           onClick={() => setActiveStatus('all')}
         >
-          <span className="tab-text">Tất cả</span>
+          <span className="tab-label">Tất cả</span>
           <span className="tab-count">{orderCounts.all}</span>
-          </button>
-        <button 
-          className={`tab ${activeStatus === 'pending' ? 'active' : ''} pending-tab`}
-          onClick={() => setActiveStatus('pending')}
-        >
-          <span className="tab-text">Chờ thanh toán</span>
-          <span className="tab-count">{orderCounts.pending}</span>
         </button>
         <button 
-          className={`tab ${activeStatus === 'processing' ? 'active' : ''} processing-tab`}
+          className={`status-tab processing ${activeStatus === 'processing' ? 'active' : ''}`}
           onClick={() => setActiveStatus('processing')}
         >
-          <span className="tab-text">Đang xử lý</span>
+          <span className="tab-label">Đang xử lý</span>
           <span className="tab-count">{orderCounts.processing}</span>
         </button>
         <button 
-          className={`tab ${activeStatus === 'completed' ? 'active' : ''} completed-tab`}
+          className={`status-tab completed ${activeStatus === 'completed' ? 'active' : ''}`}
           onClick={() => setActiveStatus('completed')}
         >
-          <span className="tab-text">Hoàn thành</span>
+          <span className="tab-label">Hoàn thành</span>
           <span className="tab-count">{orderCounts.completed}</span>
+        </button>
+        <button 
+          className={`status-tab pending ${activeStatus === 'pending' ? 'active' : ''}`}
+          onClick={() => setActiveStatus('pending')}
+        >
+          <span className="tab-label">Chờ thanh toán</span>
+          <span className="tab-count">{orderCounts.pending}</span>
         </button>
       </div>
 
-      {/* ✅ Orders Grid */}
-      <div className="orders-grid">
+      {/* ✅ Orders Table - Professional Layout */}
+      <div className="orders-table-container">
         {filteredOrders.length === 0 ? (
           <div className="no-orders">
             <div className="no-orders-icon">📋</div>
@@ -1123,144 +1383,179 @@ const OrdersContent = ({ showNotification }) => {
             </p>
           </div>
         ) : (
-          filteredOrders.map((order) => (
-            <div key={order.orderId} className="order-card">
-              {/* Order Header */}
-              <div className="order-header">
-                <div className="order-info">
-                  <h3 className="order-id">
-                    #{order.orderId ? order.orderId.slice(-8).toUpperCase() : 'N/A'}
-                  </h3>
-                  <p className="order-date">
-                    {order.createdAt ? new Date(order.createdAt).toLocaleDateString('vi-VN', {
-                      day: '2-digit',
-                      month: '2-digit',
-                      year: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    }) : 'N/A'}
-                  </p>
-                </div>
-                <div className={`status-badge status-${order.status?.toLowerCase() || 'unknown'}`}>
-                  <span className="status-dot"></span>
-                  {getStatusText(order.status)}
-                </div>
-              </div>
-
-              {/* Order Details */}
-              <div className="order-details">
-                {/* Customer Info */}
-                {order.userId && (
-                  <div className="detail-row">
-                    <span className="detail-label">👤 Khách hàng:</span>
-                    <span className="detail-value">{order.userId.slice(-8).toUpperCase()}</span>
-                  </div>
-                )}
-
-                {/* Price Information */}
-                <div className="price-section">
-                  {order.totalPrice && order.totalPrice !== order.finalPrice && (
-                    <div className="detail-row">
-                      <span className="detail-label">💰 Tổng tiền gốc:</span>
-                      <span className="detail-value original-price">
-                        {order.totalPrice.toLocaleString('vi-VN')} VNĐ
+          <table className="orders-table">
+            <thead>
+              <tr>
+                <th className="col-order-id">Mã đơn hàng</th>
+                <th className="col-status">Trạng thái</th>
+                <th className="col-customer">Khách hàng</th>
+                <th className="col-products">Sản phẩm</th>
+                <th className="col-total">Tổng tiền</th>
+                <th className="col-payment">Thanh toán</th>
+                <th className="col-address">Địa chỉ</th>
+                <th className="col-notes">Ghi chú</th>
+                <th className="col-actions">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredOrders.map((order) => (
+                <tr key={order.orderId} className="order-row">
+                  {/* Mã đơn hàng & Thời gian */}
+                  <td className="order-id-cell">
+                    <div className="order-id-info">
+                      <span className="order-id">
+                        #{order.orderId ? order.orderId.slice(0,8).toUpperCase() : 'N/A'}
+                      </span>
+                      <span className="order-date">
+                        {order.createdAt ? new Date(order.createdAt).toLocaleDateString('vi-VN', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        }) : 'N/A'}
                       </span>
                     </div>
-                  )}
-                  
-                  {order.appliedVoucherCode && (
-                    <div className="detail-row voucher-row">
-                      <span className="detail-label">🎫 Voucher:</span>
-                      <span className="detail-value voucher-code">{order.appliedVoucherCode}</span>
-                    </div>
-                  )}
-                  
-                  <div className="detail-row final-price-row">
-                    <span className="detail-label">💳 Thành tiền:</span>
-                    <span className="detail-value final-price">
-                      {order.finalPrice ? order.finalPrice.toLocaleString('vi-VN') : '0'} VNĐ
+                  </td>
+
+                  {/* Trạng thái - Di chuyển lên đầu */}
+                  <td className="status-cell">
+                    <span className={`status-badge status-${order.status?.toLowerCase() || 'unknown'}`}>
+                      {getStatusText(order.status)}
                     </span>
-                  </div>
-                </div>
-
-                {/* Completion Time */}
-                {order.completedAt && (
-                  <div className="detail-row">
-                    <span className="detail-label">✅ Hoàn thành:</span>
-                    <span className="detail-value">
-                      {new Date(order.completedAt).toLocaleDateString('vi-VN', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {/* Items List */}
-              <div className="items-section">
-                <h4 className="items-title">🛍️ Chi tiết đơn hàng</h4>
-                <div className="items-list">
-                  {order.items && Array.isArray(order.items) && order.items.length > 0 ? 
-                    order.items.map((item, index) => (
-                      <div key={index} className="item-card">
-                        <div className="item-info">
-                          <div className="item-header">
-                            <span className="item-name">
-                              {item.productName || item.name || 'Sản phẩm'}
-                            </span>
-                            <span className="item-quantity">x{item.quantity || 1}</span>
-                          </div>
-                          
-                          {item.unitPrice && (
-                            <div className="item-price">
-                              {item.unitPrice.toLocaleString('vi-VN')} VNĐ/món
-                            </div>
-                          )}
-                          
-                          {item.toppings && Array.isArray(item.toppings) && item.toppings.length > 0 && (
-                            <div className="item-toppings">
-                              <span className="toppings-label">Topping:</span>
-                              {item.toppings.map((topping, tIndex) => (
-                                <span key={tIndex} className="topping-tag">
-                                  {topping.name || topping.toppingName || 'Topping'}
-                                  {topping.price && ` (+${topping.price.toLocaleString('vi-VN')}₫)`}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )) : (
-                      <div className="no-items">
-                        <p>Không có thông tin chi tiết sản phẩm</p>
-                      </div>
-                    )
-                  }
-                </div>
-              </div>
-
-              {/* Admin Actions - Only show for Processing orders */}
-              {order.status === 'Processing' && (
-                <div className="admin-actions">
-                  <button 
-                    className="action-btn complete-btn"
-                    onClick={() => handleUpdateOrderStatus(order.orderId, 'Completed')}
-                    disabled={updating[order.orderId]}
-                  >
-                    {updating[order.orderId] ? (
-                      <>⏳ Đang cập nhật...</>
-                    ) : (
-                      <>✅ Hoàn thành đơn hàng</>
+                    {order.status?.toLowerCase() === 'completed' && order.completedAt && (
+                      <span className="completion-time">
+                        {new Date(order.completedAt).toLocaleDateString('vi-VN', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </span>
                     )}
-                  </button>
-                </div>
-              )}
-            </div>
-          ))
+                  </td>
+
+                  {/* Thông tin khách hàng - Ưu tiên customerName/customerEmail, sau đó user database */}
+                  <td className="customer-cell">
+                    <div className="customer-info">
+                      {(() => {
+                        const userInfo = getUserDisplayInfo(order);
+                        return (
+                          <>
+                            {userInfo.name && (
+                              <span className="customer-name">
+                                {userInfo.name}
+                              </span>
+                            )}
+                            {userInfo.email && (
+                              <span className="customer-email">
+                                {userInfo.email}
+                              </span>
+                            )}
+                            {userInfo.phone && (
+                              <span className="customer-phone">
+                                {userInfo.phone}
+                              </span>
+                            )}
+                          </>
+                        );
+                      })()}
+                    </div>
+                  </td>
+
+                  {/* Sản phẩm */}
+                  <td className="products-cell">
+                    <div className="products-info">
+                      {order.items && order.items.length > 0 ? (
+                        <>
+                          <span className="products-count">
+                            {order.items.length} sản phẩm
+                          </span>
+                          <div className="products-list">
+                            {order.items.map((item, idx) => (
+                              <div key={idx} className="product-item">
+                                <span className="product-name">
+                                  {item.productName || item.name}
+                                </span>
+                                <span className="product-quantity">x{item.quantity}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </>
+                      ) : (
+                        <span className="no-products">Không có sản phẩm</span>
+                      )}
+                    </div>
+                  </td>
+
+                  {/* Tổng tiền */}
+                  <td className="total-cell">
+                    <div className="price-info">
+                      <span className="final-price">
+                        {order.finalPrice ? order.finalPrice.toLocaleString('vi-VN') : '0'}₫
+                      </span>
+                      {order.totalPrice && order.totalPrice !== order.finalPrice && (
+                        <span className="original-price">
+                          {order.totalPrice.toLocaleString('vi-VN')}₫
+                        </span>
+                      )}
+                      {order.appliedVoucherCode && (
+                        <span className="voucher-applied">Voucher: {order.appliedVoucherCode}</span>
+                      )}
+                    </div>
+                  </td>
+
+                  {/* Phương thức thanh toán */}
+                  <td className="payment-cell">
+                    <span className="payment-method">
+                      {order.paymentMethod === 'COD' ? 'Thu tiền khi giao' : 
+                       order.paymentMethod === 'VNPAY' ? 'VNPay' : 
+                       order.paymentMethod === 'MOMO' ? 'MoMo' : 
+                       order.paymentMethod || 'COD'}
+                    </span>
+                  </td>
+
+                  {/* Địa chỉ giao hàng */}
+                  <td className="address-cell">
+                    <div className="address-info">
+                      <span className="delivery-address">
+                        {order.deliveryAddress || 'Không có địa chỉ'}
+                      </span>
+                    </div>
+                  </td>
+
+                  {/* Ghi chú - Cột mới */}
+                  <td className="notes-cell">
+                    <div className="notes-info">
+                      <span className="delivery-note">
+                        {order.deliveryNote || ''}
+                      </span>
+                    </div>
+                  </td>
+
+                  {/* Thao tác */}
+                  <td className="actions-cell">
+                    {order.status?.toLowerCase() === 'processing' && (
+                      <button
+                        className="action-btn confirm-btn"
+                        onClick={() => handleUpdateOrderStatus(order.orderId, 'completed')}
+                        disabled={updating[order.orderId]}
+                      >
+                        {updating[order.orderId] ? 'Đang xử lý...' : 'Xác nhận'}
+                      </button>
+                    )}
+                    
+                    {order.status?.toLowerCase() === 'pending' && (
+                      <span className="pending-note">Chờ thanh toán</span>
+                    )}
+                    
+                    {order.status?.toLowerCase() === 'completed' && (
+                      <span className="completed-note">Đã hoàn thành</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         )}
       </div>
     </div>

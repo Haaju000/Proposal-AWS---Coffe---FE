@@ -290,24 +290,47 @@ const Menu = () => {
     }
   };
 
-  // Validate cart items trước khi đặt hàng
+  // Validate cart items trước khi đặt hàng - UPDATED WITH BACKEND API
   const validateCartItems = async () => {
     try {
-      console.log('🔍 Validating cart items...');
+      console.log('🔍 Validating cart items with backend API...');
       
       const validationPromises = cartItems.map(async (item) => {
-        const orderItem = {
-          productId: String(item.originalId),
-          productType: item.type === 'drink' ? 'Drink' : 'Cake',
-          quantity: item.quantity,
-          toppingIds: []
+        // Chuẩn bị data theo OrderItem model từ backend
+        const orderItemValidation = {
+          ProductId: String(item.originalId), // UUID từ backend
+          ProductName: item.name, // Sẽ được override bởi backend
+          ProductType: item.type === 'drink' ? 'Drink' : 'Cake', // Đúng case như backend
+          Quantity: item.quantity,
+          UnitPrice: item.price, // Sẽ được override bởi backend
+          Toppings: item.selectedToppings ? item.selectedToppings.map(topping => ({
+            ToppingId: String(topping.originalId), // UUID từ backend
+            Name: topping.name, // Sẽ được override bởi backend  
+            Price: topping.price // Sẽ được override bởi backend
+          })) : [],
+          TotalPrice: 0 // Sẽ được tính bởi backend
         };
         
         try {
-          await orderService.validateOrderItem(orderItem);
-          return { item, valid: true, error: null };
+          const validatedItem = await orderService.validateOrderItem(orderItemValidation);
+          
+          console.log(`✅ Item validated: ${item.name}`, validatedItem);
+          
+          return { 
+            originalItem: item,
+            validatedItem: validatedItem,
+            valid: true, 
+            error: null
+          };
         } catch (error) {
-          return { item, valid: false, error: error.message };
+          console.error(`❌ Validation failed for ${item.name}:`, error.message);
+          
+          return { 
+            originalItem: item,
+            validatedItem: null,
+            valid: false, 
+            error: error.message
+          };
         }
       });
       
@@ -316,22 +339,28 @@ const Menu = () => {
       
       if (invalidItems.length > 0) {
         const errorMessages = invalidItems.map(result => 
-          `• ${result.item.name}: ${result.error}`
+          `• ${result.originalItem.name}: ${result.error}`
         ).join('\n');
         
         throw new Error(`Một số sản phẩm không hợp lệ:\n${errorMessages}`);
       }
       
-      console.log('✅ All cart items are valid');
-      return true;
+      console.log('✅ All cart items validated successfully');
+      
+      // Return both original and validated data for checkout
+      return validationResults.map(result => ({
+        original: result.originalItem,
+        validated: result.validatedItem
+      }));
+      
     } catch (error) {
       console.error('❌ Cart validation failed:', error);
       throw error;
     }
   };
 
-  // Open checkout modal
-  const handleCheckout = () => {
+  // Open checkout modal - UPDATED WITH VALIDATION
+  const handleCheckout = async () => {
     if (!isAuthenticated) {
       alert('Vui lòng đăng nhập để đặt hàng');
       return;
@@ -342,7 +371,45 @@ const Menu = () => {
       return;
     }
 
-    setCheckoutModalOpen(true);
+    try {
+      console.log('🔄 Starting checkout validation...');
+      
+      // Show loading state
+      const checkoutBtn = document.querySelector('.checkout-btn');
+      const originalText = checkoutBtn?.textContent;
+      if (checkoutBtn) {
+        checkoutBtn.textContent = '🔍 Đang kiểm tra...';
+        checkoutBtn.disabled = true;
+      }
+
+      // Validate all cart items
+      const validationResults = await validateCartItems();
+      
+      console.log('✅ Validation completed, opening checkout modal...');
+      
+      // Store validated data for checkout modal to use
+      window.validatedCartItems = validationResults;
+      
+      setCheckoutModalOpen(true);
+      
+    } catch (error) {
+      console.error('❌ Checkout validation failed:', error);
+      
+      // Show user-friendly error message
+      const errorMsg = error.message.includes('\n') 
+        ? error.message 
+        : `Lỗi kiểm tra sản phẩm: ${error.message}`;
+        
+      alert(errorMsg);
+      
+    } finally {
+      // Reset checkout button
+      const checkoutBtn = document.querySelector('.checkout-btn');
+      if (checkoutBtn && isAuthenticated) {
+        checkoutBtn.textContent = '💳 Tiến hành thanh toán';
+        checkoutBtn.disabled = cartItems.length === 0;
+      }
+    }
   };
 
 
@@ -555,7 +622,10 @@ const Menu = () => {
             {/* Menu Items */}
             <div className="menu-items">
               {filteredItems.map((item) => (
-                <div key={item.id} className="menu-item-card">
+                <div 
+                  key={item.id} 
+                  className={`menu-item-card ${item.stock === 0 ? 'out-of-stock' : item.stock <= 5 ? 'low-stock' : ''}`}
+                >
                   <div className="item-image">
                     {item.image && item.image.startsWith('http') ? (
                       <img src={item.image} alt={item.name} className="product-img" />
@@ -565,9 +635,7 @@ const Menu = () => {
                     {item.stock <= 5 && item.stock > 0 && (
                       <div className="stock-warning">Còn ít!</div>
                     )}
-                    {item.stock === 0 && (
-                      <div className="out-of-stock">Hết hàng</div>
-                    )}
+                    
                   </div>
                   <div className="item-details">
                     <div className="item-header">
@@ -576,8 +644,8 @@ const Menu = () => {
                     </div>
                     <p className="item-description">{item.description}</p>
                     <div className="item-stock-info">
-                      <span className="stock-label">
-                        Kho: {item.stock > 0 ? item.stock : 'Hết hàng'}
+                      <span className={`stock-label ${item.stock === 0 ? 'out-of-stock-text' : item.stock <= 5 ? 'low-stock-text' : ''}`}>
+                        {item.stock === -1 ? '' : `Kho: ${item.stock}`}
                       </span>
                     </div>
                     <div className="item-footer">
@@ -586,7 +654,8 @@ const Menu = () => {
                         <button 
                           className="quantity-btn"
                           onClick={() => updateItemQuantity(item.id, getItemQuantity(item.id) - 1)}
-                          disabled={item.stock === 0}
+                          disabled={item.stock === 0 || getItemQuantity(item.id) === 0}
+                          title={item.stock === 0 ? 'Sản phẩm hết hàng' : 'Giảm số lượng'}
                         >
                           -
                         </button>
@@ -595,12 +664,15 @@ const Menu = () => {
                           className="quantity-btn"
                           onClick={() => updateItemQuantity(item.id, getItemQuantity(item.id) + 1)}
                           disabled={item.stock === 0 || getItemQuantity(item.id) >= item.stock}
+                          title={item.stock === 0 ? 'Sản phẩm hết hàng' : 
+                                 getItemQuantity(item.id) >= item.stock ? 'Đã đạt tối đa kho' : 'Tăng số lượng'}
                         >
                           +
                         </button>
                         <button 
-                          className="add-to-cart"
+                          className={`add-to-cart ${item.stock === 0 ? 'disabled' : ''}`}
                           onClick={() => {
+                            if (item.stock === 0) return;
                             if (item.type === 'drink') {
                               setSelectedDrinkForTopping(item);
                               setToppingModalOpen(true);
@@ -608,8 +680,12 @@ const Menu = () => {
                               handleAddToCart(item);
                             }
                           }}
+                          disabled={item.stock === 0}
+                          title={item.stock === 0 ? 'Sản phẩm hết hàng' : 
+                                 item.type === 'drink' ? 'Chọn topping cho đồ uống' : 'Thêm vào giỏ hàng'}
                         >
-                          {item.type === 'drink' ? 'Chọn topping' : 'Thêm vào giỏ'}
+                          {item.stock === 0 ? 'Hết hàng' :
+                           item.type === 'drink' ? 'Chọn topping' : 'Thêm vào giỏ'}
                         </button>
                       </div>
                     </div>

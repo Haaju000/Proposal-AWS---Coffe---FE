@@ -67,13 +67,15 @@ const orderService = {
       console.log('🔍 Validating item:', orderItem);
       const response = await apiClient.post('/OrderItem/validate', orderItem);
       console.log('✅ Item validation successful:', response.data);
-      return response.data;
+      return response.data.item; // Return the validated item from backend
     } catch (error) {
       console.error('❌ Item validation error:', error);
       if (error.response?.data?.error) {
         throw new Error(error.response.data.error);
+      } else if (error.response?.status === 401) {
+        throw new Error('Vui lòng đăng nhập để tiếp tục');
       }
-      throw error;
+      throw new Error('Lỗi kết nối mạng khi kiểm tra sản phẩm');
     }
   },
 
