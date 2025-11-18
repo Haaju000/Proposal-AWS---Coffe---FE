@@ -32,7 +32,9 @@ import {
   FiCheck,
   FiX,
   FiLock,
-  FiKey
+  FiKey,
+  FiClock, // Icon cho chờ phê duyệt
+  
 } from 'react-icons/fi';
 
 // Material Design Icons cho bánh và topping
@@ -126,8 +128,8 @@ const AdminDashboard = () => {
   };
 
   // Confirmation modal functions
-  const showConfirmModal = (title, message, onConfirm) => {
-    setConfirmModal({ title, message, onConfirm });
+  const showConfirmModal = (title, message, onConfirm, type = 'danger') => {
+    setConfirmModal({ title, message, onConfirm, type });
   };
 
   const hideConfirmModal = () => {
@@ -320,9 +322,11 @@ const AdminDashboard = () => {
       {/* Confirmation Modal */}
       {confirmModal && (
         <div className="confirm-modal-overlay" onClick={hideConfirmModal}>
-          <div className="confirm-modal" onClick={(e) => e.stopPropagation()}>
+          <div className={`confirm-modal ${confirmModal.type === 'success' ? 'confirm-modal-success' : 'confirm-modal-danger'}`} onClick={(e) => e.stopPropagation()}>
             <div className="confirm-modal-header">
-              <div className="confirm-modal-icon">⚠</div>
+              <div className={`confirm-modal-icon ${confirmModal.type === 'success' ? 'confirm-icon-success' : 'confirm-icon-danger'}`}>
+                {confirmModal.type === 'success' ? '✓' : '⚠'}
+              </div>
               <h3 className="confirm-modal-title">{confirmModal.title}</h3>
             </div>
             <p className="confirm-modal-message">{confirmModal.message}</p>
@@ -334,7 +338,7 @@ const AdminDashboard = () => {
                 Hủy bỏ
               </button>
               <button 
-                className="confirm-btn confirm-btn-delete"
+                className={`confirm-btn ${confirmModal.type === 'success' ? 'confirm-btn-success' : 'confirm-btn-delete'}`}
                 onClick={() => {
                   confirmModal.onConfirm();
                   hideConfirmModal();
@@ -1829,10 +1833,9 @@ const CustomersContent = ({ showNotification, showConfirmModal }) => {
 const ShippersContent = ({ showNotification, showConfirmModal }) => {
   const [shippers, setShippers] = useState([]);
   const [pendingShippers, setPendingShippers] = useState([]);
+  const [rejectedShippers, setRejectedShippers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('pending');
-  const [selectedShipper, setSelectedShipper] = useState(null);
-  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('all');
 
   useEffect(() => {
     loadShippersData();
@@ -1848,6 +1851,7 @@ const ShippersContent = ({ showNotification, showConfirmModal }) => {
       
       setShippers(allShippersData);
       setPendingShippers(pendingShippersData);
+      setRejectedShippers(allShippersData.filter(s => s.status === 'rejected'));
       
       if (showSuccessNotification) {
         showNotification('Thành công', 'Tải danh sách shipper thành công', 'success');
@@ -1863,7 +1867,7 @@ const ShippersContent = ({ showNotification, showConfirmModal }) => {
   const handleApproveShipper = (shipper) => {
     showConfirmModal(
       'Phê duyệt Shipper',
-      `Bạn có chắc chắn muốn phê duyệt tài khoản shipper "${shipper.username || shipper.email}"?`,
+      `Bạn có chắc chắn muốn phê duyệt tài khoản shipper "${shipper.fullName || shipper.username}"?`,
       async () => {
         try {
           await shipperService.approveShipper(shipper.userId);
@@ -1872,14 +1876,15 @@ const ShippersContent = ({ showNotification, showConfirmModal }) => {
         } catch (error) {
           showNotification('Lỗi', 'Không thể phê duyệt shipper', 'error');
         }
-      }
+      },
+      'success'
     );
   };
 
   const handleRejectShipper = (shipper) => {
     showConfirmModal(
       'Từ chối Shipper',
-      `Bạn có chắc chắn muốn từ chối tài khoản shipper "${shipper.username || shipper.email}"?`,
+      `Bạn có chắc chắn muốn từ chối tài khoản shipper "${shipper.fullName || shipper.username}"?`,
       async () => {
         try {
           await shipperService.rejectShipper(shipper.userId);
@@ -1892,34 +1897,10 @@ const ShippersContent = ({ showNotification, showConfirmModal }) => {
     );
   };
 
-  const handleLockShipper = (shipper) => {
-    const isLocked = shipper.status === 'locked';
-    const actionText = isLocked ? 'mở khóa' : 'khóa';
-    
-    showConfirmModal(
-      `${isLocked ? 'Mở khóa' : 'Khóa'} tài khoản Shipper`,
-      `Bạn có chắc chắn muốn ${actionText} tài khoản shipper "${shipper.username || shipper.email}"?`,
-      async () => {
-        try {
-          if (isLocked) {
-            // Có thể cần API unlock riêng, tạm thời sử dụng approve
-            await shipperService.approveShipper(shipper.userId);
-          } else {
-            await shipperService.lockShipper(shipper.userId);
-          }
-          showNotification('Thành công', `${actionText.charAt(0).toUpperCase() + actionText.slice(1)} tài khoản shipper thành công`, 'success');
-          loadShippersData(false);
-        } catch (error) {
-          showNotification('Lỗi', `Không thể ${actionText} tài khoản shipper`, 'error');
-        }
-      }
-    );
-  };
-
   const handleResetPassword = (shipper) => {
     showConfirmModal(
       'Reset mật khẩu Shipper',
-      `Bạn có chắc chắn muốn reset mật khẩu cho shipper "${shipper.username || shipper.email}"? Mật khẩu mới sẽ được gửi qua email.`,
+      `Bạn có chắc chắn muốn reset mật khẩu cho shipper "${shipper.fullName || shipper.username}"? Mật khẩu mới sẽ được gửi qua email.`,
       async () => {
         try {
           await shipperService.resetShipperPassword(shipper.userId);
@@ -1931,19 +1912,12 @@ const ShippersContent = ({ showNotification, showConfirmModal }) => {
     );
   };
 
-  const handleViewShipper = (shipper) => {
-    setSelectedShipper(shipper);
-    setViewModalOpen(true);
-  };
-
   const getDisplayShippers = () => {
     switch (activeTab) {
       case 'pending':
         return pendingShippers;
-      case 'approved':
-        return shippers.filter(s => s.status === 'approved' || s.status === 'active');
-      case 'locked':
-        return shippers.filter(s => s.status === 'locked');
+      case 'rejected':
+        return rejectedShippers;
       case 'all':
       default:
         return shippers;
@@ -1982,32 +1956,25 @@ const ShippersContent = ({ showNotification, showConfirmModal }) => {
       {/* Shipper Tabs */}
       <div className="shipper-tabs">
         <button 
-          className={`tab ${activeTab === 'pending' ? 'active' : ''}`}
-          onClick={() => setActiveTab('pending')}
-        >
-          <FiTruck size={18} />
-          <span>Chờ phê duyệt ({pendingShippers.length})</span>
-        </button>
-        <button 
-          className={`tab ${activeTab === 'approved' ? 'active' : ''}`}
-          onClick={() => setActiveTab('approved')}
-        >
-          <FiCheck size={18} />
-          <span>Đã phê duyệt ({shippers.filter(s => s.status === 'approved' || s.status === 'active').length})</span>
-        </button>
-        <button 
-          className={`tab ${activeTab === 'locked' ? 'active' : ''}`}
-          onClick={() => setActiveTab('locked')}
-        >
-          <FiLock size={18} />
-          <span>Bị khóa ({shippers.filter(s => s.status === 'locked').length})</span>
-        </button>
-        <button 
           className={`tab ${activeTab === 'all' ? 'active' : ''}`}
           onClick={() => setActiveTab('all')}
         >
           <FiUsers size={18} />
           <span>Tất cả ({shippers.length})</span>
+        </button>
+        <button 
+          className={`tab ${activeTab === 'pending' ? 'active' : ''}`}
+          onClick={() => setActiveTab('pending')}
+        >
+          <FiClock size={18} />
+          <span>Chờ phê duyệt ({pendingShippers.length})</span>
+        </button>
+        <button 
+          className={`tab ${activeTab === 'rejected' ? 'active' : ''}`}
+          onClick={() => setActiveTab('rejected')}
+        >
+          <FiX size={18} />
+          <span>Bị từ chối ({rejectedShippers.length})</span>
         </button>
       </div>
 
@@ -2021,19 +1988,20 @@ const ShippersContent = ({ showNotification, showConfirmModal }) => {
           <table className="shippers-table">
             <thead>
               <tr>
-                <th>Tên Shipper</th>
+                <th>Họ tên</th>
                 <th>Email</th>
                 <th>Số điện thoại</th>
-                <th>Phương tiện</th>
-                <th>Trạng thái</th>
-                <th>Ngày đăng ký</th>
+                <th>Loại xe</th>
+                <th>Biển số xe</th>
+                <th>Số tài khoản</th>
+                <th>Ngân hàng</th>
                 <th>Thao tác</th>
               </tr>
             </thead>
             <tbody>
               {getDisplayShippers().length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="no-data">
+                  <td colSpan="8" className="no-data">
                     Không có shipper nào
                   </td>
                 </tr>
@@ -2043,75 +2011,51 @@ const ShippersContent = ({ showNotification, showConfirmModal }) => {
                     <td>
                       <div className="shipper-info">
                         <FiTruck className="shipper-icon" />
-                        {shipper.username || shipper.fullName || 'N/A'}
+                        {shipper.fullName || 'N/A'}
                       </div>
                     </td>
-                    <td>{shipper.email || shipper.username}</td>
-                    <td>{shipper.phoneNumber || 'Chưa cập nhật'}</td>
+                    <td>{shipper.email || 'Chưa cập nhật'}</td>
+                    <td>{shipper.phone || 'Chưa cập nhật'}</td>
                     <td>
                       <span className="vehicle-type">
                         {shipper.vehicleType || 'Xe máy'}
                       </span>
                     </td>
-                    <td>{getStatusBadge(shipper.status)}</td>
-                    <td>{formatDate(shipper.createdAt || shipper.registrationDate)}</td>
+                    <td>{shipper.vehiclePlate || 'Chưa cập nhật'}</td>
+                    <td>{shipper.bankAccount || 'Chưa cập nhật'}</td>
+                    <td>{shipper.bankName || 'Chưa cập nhật'}</td>
                     <td>
                       <div className="action-buttons">
-                        <button
-                          className="btn btn-sm btn-info"
-                          onClick={() => handleViewShipper(shipper)}
-                          title="Xem chi tiết"
-                        >
-                          <FiEye size={14} />
-                        </button>
-                        
-                        {/* Conditional action buttons based on status */}
-                        {shipper.status === 'pending' && (
+                        {/* Actions for "Chờ phê duyệt" tab */}
+                        {activeTab === 'pending' && (
                           <>
                             <button
-                              className="btn btn-sm btn-success"
+                              className="btn btn-sm btn-success approve-btn"
                               onClick={() => handleApproveShipper(shipper)}
-                              title="Phê duyệt"
+                              title="Phê duyệt shipper"
                             >
-                              <FiCheck size={14} />
+                              <FiCheck size={16} />
                             </button>
                             <button
-                              className="btn btn-sm btn-danger"
+                              className="btn btn-sm btn-danger deny-btn"
                               onClick={() => handleRejectShipper(shipper)}
-                              title="Từ chối"
+                              title="Từ chối shipper"
                             >
-                              <FiX size={14} />
+                              <FiX size={16} />
                             </button>
                           </>
                         )}
                         
-                        {(shipper.status === 'approved' || shipper.status === 'active') && (
+                        {/* View details for other tabs */}
+                        {activeTab !== 'pending' && (
                           <button
-                            className="btn btn-sm btn-warning"
-                            onClick={() => handleLockShipper(shipper)}
-                            title="Khóa tài khoản"
+                            className="btn btn-sm btn-info"
+                            onClick={() => console.log('View shipper details:', shipper)}
+                            title="Xem chi tiết"
                           >
-                            <FiLock size={14} />
+                            <FiEye size={14} />
                           </button>
                         )}
-                        
-                        {shipper.status === 'locked' && (
-                          <button
-                            className="btn btn-sm btn-success"
-                            onClick={() => handleLockShipper(shipper)}
-                            title="Mở khóa tài khoản"
-                          >
-                            🔓
-                          </button>
-                        )}
-                        
-                        <button
-                          className="btn btn-sm btn-secondary"
-                          onClick={() => handleResetPassword(shipper)}
-                          title="Reset mật khẩu"
-                        >
-                          <FiKey size={14} />
-                        </button>
                       </div>
                     </td>
                   </tr>
@@ -2119,153 +2063,6 @@ const ShippersContent = ({ showNotification, showConfirmModal }) => {
               )}
             </tbody>
           </table>
-        </div>
-      )}
-
-      {/* Shipper Detail Modal */}
-      {viewModalOpen && selectedShipper && (
-        <div className="modal-overlay" onClick={() => setViewModalOpen(false)}>
-          <div className="shipper-detail-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="shipper-modal-header">
-              <div className="shipper-avatar">
-                <FiTruck size={32} />
-              </div>
-              <div className="shipper-title">
-                <h2>{selectedShipper.username || selectedShipper.fullName || 'Shipper'}</h2>
-                <p className="shipper-role">Tài xế giao hàng</p>
-              </div>
-              <button 
-                className="modal-close-btn"
-                onClick={() => setViewModalOpen(false)}
-              >
-                ✕
-              </button>
-            </div>
-            
-            <div className="shipper-modal-body">
-              <div className="shipper-stats">
-                <div className="stat-card">
-                  <div className="stat-icon">
-                    <FiTruck className="truck-icon" />
-                  </div>
-                  <div className="stat-content">
-                    <h4>{selectedShipper.deliveredOrders || 0}</h4>
-                    <p>Đơn hàng đã giao</p>
-                  </div>
-                </div>
-                <div className="stat-card">
-                  <div className="stat-icon rating">
-                    <FiStar className="star-icon" />
-                  </div>
-                  <div className="stat-content">
-                    <h4>{selectedShipper.rating || 'N/A'}</h4>
-                    <p>Đánh giá</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="shipper-details">
-                <div className="detail-section">
-                  <h3>Thông tin liên hệ</h3>
-                  <div className="detail-grid">
-                    <div className="detail-item">
-                      <label>Email</label>
-                      <span>{selectedShipper.email || selectedShipper.username}</span>
-                    </div>
-                    <div className="detail-item">
-                      <label>Số điện thoại</label>
-                      <span>{selectedShipper.phoneNumber || 'Chưa cập nhật'}</span>
-                    </div>
-                    <div className="detail-item">
-                      <label>Địa chỉ</label>
-                      <span>{selectedShipper.address || 'Chưa cập nhật'}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="detail-section">
-                  <h3>Thông tin phương tiện</h3>
-                  <div className="detail-grid">
-                    <div className="detail-item">
-                      <label>Loại phương tiện</label>
-                      <span>{selectedShipper.vehicleType || 'Xe máy'}</span>
-                    </div>
-                    <div className="detail-item">
-                      <label>Biển số xe</label>
-                      <span>{selectedShipper.vehicleNumber || 'Chưa cập nhật'}</span>
-                    </div>
-                    <div className="detail-item">
-                      <label>Trạng thái</label>
-                      <span>{getStatusBadge(selectedShipper.status)}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="shipper-modal-footer">
-              {selectedShipper.status === 'pending' && (
-                <>
-                  <button 
-                    className="btn btn-success"
-                    onClick={() => {
-                      handleApproveShipper(selectedShipper);
-                      setViewModalOpen(false);
-                    }}
-                  >
-                    <FiCheck size={16} /> Phê duyệt
-                  </button>
-                  <button 
-                    className="btn btn-danger"
-                    onClick={() => {
-                      handleRejectShipper(selectedShipper);
-                      setViewModalOpen(false);
-                    }}
-                  >
-                    <FiX size={16} /> Từ chối
-                  </button>
-                </>
-              )}
-              
-              {(selectedShipper.status === 'approved' || selectedShipper.status === 'active') && (
-                <button 
-                  className="btn btn-warning"
-                  onClick={() => {
-                    handleLockShipper(selectedShipper);
-                    setViewModalOpen(false);
-                  }}
-                >
-                  <FiLock size={16} /> Khóa tài khoản
-                </button>
-              )}
-              
-              {selectedShipper.status === 'locked' && (
-                <button 
-                  className="btn btn-success"
-                  onClick={() => {
-                    handleLockShipper(selectedShipper);
-                    setViewModalOpen(false);
-                  }}
-                >
-                  🔓 Mở khóa tài khoản
-                </button>
-              )}
-              
-              <button 
-                className="btn btn-secondary"
-                onClick={() => handleResetPassword(selectedShipper)}
-              >
-                <FiKey size={16} /> Reset mật khẩu
-              </button>
-              
-              <button 
-                className="btn btn-secondary"
-                onClick={() => setViewModalOpen(false)}
-              >
-                Đóng
-              </button>
-            </div>
-          </div>
         </div>
       )}
     </div>

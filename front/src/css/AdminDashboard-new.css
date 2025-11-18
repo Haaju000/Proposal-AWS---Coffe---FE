@@ -1470,6 +1470,35 @@ body {
   transform: translateY(0);
 }
 
+/* Success Modal Styling */
+.confirm-modal-success {
+  border-top: 5px solid var(--success);
+}
+
+.confirm-icon-success {
+  background: linear-gradient(135deg, var(--success), #059669);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.confirm-icon-danger {
+  background: linear-gradient(135deg, var(--error), #DC2626);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.confirm-btn-success {
+  background: linear-gradient(135deg, var(--success), #059669);
+  color: var(--white);
+  border: 2px solid var(--success);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+}
+
+.confirm-btn-success:hover {
+  background: linear-gradient(135deg, #059669, #047857);
+  border-color: #059669;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3);
+}
+
 /* Mobile Responsive */
 @media (max-width: 768px) {
   .confirm-modal {
@@ -1602,6 +1631,35 @@ body {
 
 .btn-danger:hover {
   background: #DC2626;
+}
+
+/* Shipper Approval Buttons */
+.approve-btn {
+  background: linear-gradient(135deg, var(--success), #059669);
+  border: none;
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+  transition: all 0.3s ease;
+}
+
+.approve-btn:hover {
+  background: linear-gradient(135deg, #059669, #047857);
+  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+  transform: translateY(-2px);
+}
+
+.deny-btn {
+  background: linear-gradient(135deg, var(--error), #DC2626);
+  border: none;
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+  transition: all 0.3s ease;
+}
+
+.deny-btn:hover {
+  background: linear-gradient(135deg, #DC2626, #B91C1C);
+  box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
+  transform: translateY(-2px);
 }
 
 /* Loading State */

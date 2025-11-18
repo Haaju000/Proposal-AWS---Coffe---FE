@@ -73,7 +73,7 @@ const shipperService = {
   approveShipper: async (userId) => {
     try {
       console.log(`✅ Approving shipper with ID: ${userId}`);
-      const response = await shipperAPI.post(`/api/Admin/shipper/${userId}/approve`);
+      const response = await shipperAPI.post(`/api/Admin/shipper/${userId}/approve`, {});
       console.log('✅ Shipper approved successfully:', response.data);
       return response.data;
     } catch (error) {
@@ -93,7 +93,7 @@ const shipperService = {
   rejectShipper: async (userId) => {
     try {
       console.log(`❌ Rejecting shipper with ID: ${userId}`);
-      const response = await shipperAPI.post(`/api/Admin/shipper/${userId}/reject`);
+      const response = await shipperAPI.post(`/api/Admin/shipper/${userId}/reject`, {});
       console.log('✅ Shipper rejected successfully:', response.data);
       return response.data;
     } catch (error) {
