@@ -1833,9 +1833,12 @@ const CustomersContent = ({ showNotification, showConfirmModal }) => {
 const ShippersContent = ({ showNotification, showConfirmModal }) => {
   const [shippers, setShippers] = useState([]);
   const [pendingShippers, setPendingShippers] = useState([]);
-  const [rejectedShippers, setRejectedShippers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all');
+  
+  // Modal lý do từ chối
+  const [rejectModal, setRejectModal] = useState(null);
+  const [rejectReason, setRejectReason] = useState('');
 
   useEffect(() => {
     loadShippersData();
@@ -1851,7 +1854,6 @@ const ShippersContent = ({ showNotification, showConfirmModal }) => {
       
       setShippers(allShippersData);
       setPendingShippers(pendingShippersData);
-      setRejectedShippers(allShippersData.filter(s => s.status === 'rejected'));
       
       if (showSuccessNotification) {
         showNotification('Thành công', 'Tải danh sách shipper thành công', 'success');
@@ -1882,19 +1884,38 @@ const ShippersContent = ({ showNotification, showConfirmModal }) => {
   };
 
   const handleRejectShipper = (shipper) => {
-    showConfirmModal(
-      'Từ chối Shipper',
-      `Bạn có chắc chắn muốn từ chối tài khoản shipper "${shipper.fullName || shipper.username}"?`,
-      async () => {
-        try {
-          await shipperService.rejectShipper(shipper.userId);
-          showNotification('Thành công', 'Từ chối shipper thành công', 'success');
-          loadShippersData(false);
-        } catch (error) {
-          showNotification('Lỗi', 'Không thể từ chối shipper', 'error');
-        }
-      }
-    );
+    setRejectModal(shipper);
+    setRejectReason('');
+  };
+
+  const confirmRejectShipper = async () => {
+    if (!rejectReason.trim()) {
+      showNotification('Lỗi', 'Vui lòng nhập lý do từ chối', 'error');
+      return;
+    }
+
+    try {
+      console.log('🔄 Rejecting shipper:', rejectModal.userId, 'with reason:', rejectReason);
+      const result = await shipperService.rejectShipper(rejectModal.userId, rejectReason);
+      console.log('✅ Reject result:', result);
+      
+      showNotification('Thành công', 'Từ chối shipper thành công', 'success');
+      setRejectModal(null);
+      setRejectReason('');
+      
+      // Delay một chút trước khi reload để đảm bảo backend đã cập nhật
+      setTimeout(() => {
+        loadShippersData(false);
+      }, 500);
+    } catch (error) {
+      console.error('❌ Reject error:', error);
+      showNotification('Lỗi', 'Không thể từ chối shipper', 'error');
+    }
+  };
+
+  const cancelRejectShipper = () => {
+    setRejectModal(null);
+    setRejectReason('');
   };
 
   const handleResetPassword = (shipper) => {
@@ -1916,8 +1937,6 @@ const ShippersContent = ({ showNotification, showConfirmModal }) => {
     switch (activeTab) {
       case 'pending':
         return pendingShippers;
-      case 'rejected':
-        return rejectedShippers;
       case 'all':
       default:
         return shippers;
@@ -1969,13 +1988,7 @@ const ShippersContent = ({ showNotification, showConfirmModal }) => {
           <FiClock size={18} />
           <span>Chờ phê duyệt ({pendingShippers.length})</span>
         </button>
-        <button 
-          className={`tab ${activeTab === 'rejected' ? 'active' : ''}`}
-          onClick={() => setActiveTab('rejected')}
-        >
-          <FiX size={18} />
-          <span>Bị từ chối ({rejectedShippers.length})</span>
-        </button>
+
       </div>
 
       {loading ? (
@@ -1995,7 +2008,7 @@ const ShippersContent = ({ showNotification, showConfirmModal }) => {
                 <th>Biển số xe</th>
                 <th>Số tài khoản</th>
                 <th>Ngân hàng</th>
-                <th>Thao tác</th>
+                
               </tr>
             </thead>
             <tbody>
@@ -2046,16 +2059,6 @@ const ShippersContent = ({ showNotification, showConfirmModal }) => {
                           </>
                         )}
                         
-                        {/* View details for other tabs */}
-                        {activeTab !== 'pending' && (
-                          <button
-                            className="btn btn-sm btn-info"
-                            onClick={() => console.log('View shipper details:', shipper)}
-                            title="Xem chi tiết"
-                          >
-                            <FiEye size={14} />
-                          </button>
-                        )}
                       </div>
                     </td>
                   </tr>
@@ -2063,6 +2066,54 @@ const ShippersContent = ({ showNotification, showConfirmModal }) => {
               )}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Modal lý do từ chối */}
+      {rejectModal && (
+        <div className="confirm-modal-overlay" onClick={cancelRejectShipper}>
+          <div className="reject-reason-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="reject-modal-header">
+              <div className="reject-modal-icon">
+                <FiX size={24} />
+              </div>
+              <h3 className="reject-modal-title">Từ chối Shipper</h3>
+            </div>
+            <div className="reject-modal-body">
+              <p className="reject-modal-message">
+                Từ chối tài khoản shipper: <strong>{rejectModal.fullName || rejectModal.username}</strong>
+              </p>
+              <div className="reject-reason-field">
+                <label htmlFor="rejectReason">Lý do từ chối *</label>
+                <textarea
+                  id="rejectReason"
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  placeholder="Nhập lý do từ chối (bắt buộc)..."
+                  rows={4}
+                  maxLength={500}
+                />
+                <div className="character-count">
+                  {rejectReason.length}/500 ký tự
+                </div>
+              </div>
+            </div>
+            <div className="reject-modal-actions">
+              <button 
+                className="confirm-btn confirm-btn-cancel"
+                onClick={cancelRejectShipper}
+              >
+                Hủy bỏ
+              </button>
+              <button 
+                className="confirm-btn confirm-btn-delete"
+                onClick={confirmRejectShipper}
+                disabled={!rejectReason.trim()}
+              >
+                Từ chối
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

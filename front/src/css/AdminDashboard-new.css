@@ -1499,6 +1499,136 @@ body {
   box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3);
 }
 
+/* Reject Reason Modal */
+.reject-reason-modal {
+  background: var(--white);
+  border-radius: var(--radius-2xl);
+  box-shadow: 0 25px 50px -12px rgba(139, 69, 19, 0.25);
+  width: 600px;
+  max-width: 95vw;
+  position: relative;
+  animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  border-top: 5px solid var(--error);
+}
+
+.reject-modal-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-2xl) var(--spacing-2xl) var(--spacing-lg);
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.reject-modal-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--error), #DC2626);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--white);
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.reject-modal-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--gray-800);
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+}
+
+.reject-modal-body {
+  padding: var(--spacing-2xl);
+}
+
+.reject-modal-message {
+  font-size: 1rem;
+  color: var(--gray-600);
+  margin-bottom: var(--spacing-xl);
+  line-height: 1.5;
+}
+
+.reject-reason-field {
+  margin-bottom: var(--spacing-lg);
+}
+
+.reject-reason-field label {
+  display: block;
+  font-weight: 600;
+  color: var(--gray-700);
+  margin-bottom: var(--spacing-sm);
+  font-size: 0.9rem;
+}
+
+.reject-reason-field textarea {
+  width: 100%;
+  padding: var(--spacing-md);
+  border: 2px solid var(--gray-200);
+  border-radius: var(--radius-lg);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  resize: vertical;
+  min-height: 100px;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.reject-reason-field textarea:focus {
+  border-color: var(--coffee-primary);
+  box-shadow: 0 0 0 3px rgba(139, 69, 19, 0.1);
+  outline: none;
+}
+
+.reject-reason-field textarea:disabled {
+  background: var(--gray-50);
+  cursor: not-allowed;
+}
+
+.character-count {
+  text-align: right;
+  font-size: 0.8rem;
+  color: var(--gray-500);
+  margin-top: var(--spacing-xs);
+}
+
+.reject-modal-actions {
+  display: flex;
+  gap: var(--spacing-md);
+  justify-content: flex-end;
+  padding: var(--spacing-lg) var(--spacing-2xl) var(--spacing-2xl);
+  border-top: 1px solid var(--gray-200);
+}
+
+.reject-modal-actions .confirm-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.reject-modal-actions .confirm-btn:disabled:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* Reject Reason Display */
+.reject-reason {
+  max-width: 200px;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  color: var(--gray-700);
+  word-wrap: break-word;
+  hyphens: auto;
+}
+
+.reject-reason:empty::before {
+  content: 'Không có lý do';
+  color: var(--gray-400);
+  font-style: italic;
+}
+
 /* Mobile Responsive */
 @media (max-width: 768px) {
   .confirm-modal {

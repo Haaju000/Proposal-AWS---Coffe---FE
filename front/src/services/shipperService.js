@@ -56,7 +56,7 @@ const shipperService = {
     }
   },
 
-  // GET /api/Admin/shippers - Lấy danh sách tất cả shippers
+  // GET /api/Admin/shippers - Lấy tất cả shippers
   getAllShippers: async () => {
     try {
       console.log('🔍 Fetching all shippers...');
@@ -68,6 +68,8 @@ const shipperService = {
       throw error;
     }
   },
+
+
 
   // POST /api/Admin/shipper/{userId}/approve - Phê duyệt shipper
   approveShipper: async (userId) => {
@@ -90,10 +92,10 @@ const shipperService = {
   },
 
   // POST /api/Admin/shipper/{userId}/reject - Từ chối shipper
-  rejectShipper: async (userId) => {
+  rejectShipper: async (userId, reason = '') => {
     try {
-      console.log(`❌ Rejecting shipper with ID: ${userId}`);
-      const response = await shipperAPI.post(`/api/Admin/shipper/${userId}/reject`, {});
+      console.log(`❌ Rejecting shipper with ID: ${userId}, reason: ${reason}`);
+      const response = await shipperAPI.post(`/api/Admin/shipper/${userId}/reject`, { reason });
       console.log('✅ Shipper rejected successfully:', response.data);
       return response.data;
     } catch (error) {
