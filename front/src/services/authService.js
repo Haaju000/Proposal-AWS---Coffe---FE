@@ -383,6 +383,35 @@ const authService = {
   // Get refresh token
   getRefreshToken: () => {
     return localStorage.getItem('refresh_token');
+  },
+
+  // Get Local token (for Shipper)
+  getLocalToken: () => {
+    return localStorage.getItem('local_token');
+  },
+
+  // Get appropriate token based on user type
+  getToken: () => {
+    const user = authService.getCurrentUser();
+    if (user?.role === 'Shipper') {
+      return localStorage.getItem('local_token');
+    }
+    return localStorage.getItem('access_token');
+  },
+
+  // Logout function
+  logout: () => {
+    // Clear all tokens and user data
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('id_token'); 
+    localStorage.removeItem('refresh_token');
+    localStorage.removeItem('local_token');
+    localStorage.removeItem('user');
+    
+    console.log('🚪 User logged out successfully');
+    
+    // Redirect to login page
+    window.location.href = '/login';
   }
 };
 

@@ -1,0 +1,753 @@
+/* Shipper Profile Styles - Clean & Simple Design */
+.shipper-profile-content {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* Profile Notice for empty state */
+.shipper-profile-notice {
+  text-align: center;
+  padding: 60px 20px;
+  margin: 40px auto;
+  max-width: 500px;
+  background: linear-gradient(135deg, #fff9e6 0%, #ffffff 100%);
+  border-radius: 12px;
+  border: 2px solid #f0e5d0;
+  box-shadow: 0 4px 12px rgba(139, 69, 19, 0.08);
+}
+
+.shipper-profile-notice h3 {
+  color: #8B4513;
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0 0 12px 0;
+}
+
+.shipper-profile-notice p {
+  color: #A0522D;
+  font-size: 16px;
+  margin: 0 0 30px 0;
+  line-height: 1.5;
+}
+
+.shipper-profile-notice .shipper-btn-primary {
+  background: linear-gradient(135deg, #8B4513 0%, #A0522D 100%);
+  color: white;
+  border: none;
+  padding: 14px 28px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.shipper-profile-notice .shipper-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(139, 69, 19, 0.3);
+}
+
+/* Profile Container */
+.shipper-profile-container {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  border: 1px solid #e5e5e5;
+}
+
+/* Profile Header */
+.shipper-profile-header {
+  background: linear-gradient(135deg, #8B4513 0%, #A0522D 100%);
+  padding: 40px;
+  color: white;
+  text-align: center;
+}
+
+.shipper-profile-avatar {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36px;
+  font-weight: bold;
+  margin: 0 auto 20px;
+  border: 4px solid rgba(255, 255, 255, 0.3);
+}
+
+.shipper-profile-name {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0 0 8px 0;
+}
+
+.shipper-profile-title {
+  font-size: 16px;
+  opacity: 0.9;
+  margin: 0 0 20px 0;
+}
+
+.shipper-profile-contact {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  flex-wrap: wrap;
+}
+
+.shipper-contact-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.shipper-contact-label {
+  font-size: 12px;
+  opacity: 0.8;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.shipper-contact-value {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.shipper-profile-actions {
+  margin-top: 30px;
+}
+
+.shipper-edit-btn {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.shipper-edit-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+/* Profile Content */
+.shipper-profile-body {
+  padding: 0;
+}
+
+.shipper-profile-section {
+  padding: 40px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.shipper-profile-section:last-child {
+  border-bottom: none;
+}
+
+.shipper-section-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 24px 0;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #8B4513;
+  display: inline-block;
+}
+
+.shipper-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 24px;
+}
+
+.shipper-info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.shipper-info-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.shipper-info-value {
+  font-size: 16px;
+  color: #333;
+  font-weight: 400;
+}
+
+.shipper-info-value.empty {
+  color: #999;
+  font-style: italic;
+}
+
+/* Statistics Section */
+.shipper-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+.shipper-stat-card {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 20px;
+  text-align: center;
+}
+
+.shipper-stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #8B4513;
+  margin-bottom: 4px;
+}
+
+.shipper-stat-label {
+  font-size: 13px;
+  color: #666;
+  font-weight: 500;
+}
+
+/* Form Styles */
+.shipper-profile-form {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+
+.shipper-form-section {
+  padding: 40px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.shipper-form-section:last-child {
+  border-bottom: none;
+}
+
+.shipper-form-section-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 24px 0;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #8B4513;
+  display: inline-block;
+}
+
+.shipper-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.shipper-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.shipper-form-group label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+}
+
+.shipper-required {
+  color: #dc3545;
+}
+
+.shipper-form-hint {
+  color: #666;
+  font-weight: 400;
+  font-size: 12px;
+}
+
+.shipper-form-group input,
+.shipper-form-group select,
+.shipper-form-group textarea {
+  padding: 12px 16px;
+  border: 2px solid #e5e5e5;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: border-color 0.3s ease;
+}
+
+.shipper-form-group input:focus,
+.shipper-form-group select:focus,
+.shipper-form-group textarea:focus {
+  outline: none;
+  border-color: #8B4513;
+}
+
+.shipper-form-group textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.shipper-form-actions {
+  padding: 30px 40px;
+  background: #f8f9fa;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.shipper-btn-secondary {
+  background: #6c757d;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.shipper-btn-secondary:hover {
+  background: #545b62;
+}
+
+.shipper-btn-primary {
+  background: linear-gradient(135deg, #8B4513 0%, #A0522D 100%);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.shipper-btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(139, 69, 19, 0.3);
+}
+
+.shipper-btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Loading and Error States */
+.shipper-loading {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+  font-style: italic;
+}
+
+.shipper-error {
+  background: #fee;
+  border: 1px solid #fcc;
+  color: #c33;
+  padding: 16px;
+  border-radius: 6px;
+  margin: 20px 0;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .shipper-profile-content {
+    padding: 0 16px;
+  }
+  
+  .shipper-profile-header {
+    padding: 30px 20px;
+  }
+  
+  .shipper-profile-section,
+  .shipper-form-section {
+    padding: 30px 20px;
+  }
+  
+  .shipper-form-actions {
+    padding: 20px;
+    flex-direction: column;
+  }
+  
+  .shipper-profile-contact {
+    gap: 20px;
+  }
+  
+  .shipper-info-grid,
+  .shipper-form-grid,
+  .shipper-stats-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Animation */
+.shipper-profile-container {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Inline Editing Styles */
+.shipper-inline-input,
+.shipper-inline-select,
+.shipper-inline-textarea {
+  width: 100%;
+  padding: 8px 12px;
+  border: 2px solid #e8d5b7;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  background: white;
+  transition: all 0.3s ease;
+  resize: none;
+}
+
+.shipper-inline-input:focus,
+.shipper-inline-select:focus,
+.shipper-inline-textarea:focus {
+  outline: none;
+  border-color: #8B4513;
+  box-shadow: 0 0 0 3px rgba(139, 69, 19, 0.1);
+}
+
+.shipper-inline-textarea {
+  min-height: 60px;
+  resize: vertical;
+}
+
+/* Row-based Layout Styles */
+.shipper-info-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.shipper-info-row {
+  display: flex;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #f0e5d0;
+}
+
+.shipper-info-row:last-child {
+  border-bottom: none;
+}
+
+.shipper-info-row .shipper-info-label {
+  flex: 0 0 140px;
+  font-weight: 600;
+  color: #8B4513;
+  margin-right: 16px;
+  font-size: 14px;
+}
+
+.shipper-info-row .shipper-info-value {
+  flex: 1;
+  color: #5d4037;
+  font-size: 14px;
+}
+
+.shipper-info-row .shipper-info-value.empty {
+  color: #999;
+  font-style: italic;
+}
+
+.shipper-info-row .shipper-inline-input,
+.shipper-info-row .shipper-inline-select {
+  flex: 1;
+  margin: 0;
+}
+
+/* Plate Input Group */
+.shipper-plate-input-group {
+  display: flex;
+  gap: 8px;
+  flex: 1;
+}
+
+.shipper-plate-input-group .shipper-inline-input {
+  flex: 1;
+}
+
+.shipper-random-plate-btn {
+  background: linear-gradient(135deg, #8B4513 0%, #A0522D 100%);
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+}
+
+.shipper-random-plate-btn:hover {
+  background: linear-gradient(135deg, #6d3410 0%, #8B4513 100%);
+  transform: scale(1.05);
+}
+
+/* Inline Action Buttons */
+.shipper-inline-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.shipper-save-btn,
+.shipper-cancel-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.shipper-save-btn {
+  background: linear-gradient(135deg, #2e7d2e 0%, #4caf50 100%);
+  color: white;
+}
+
+.shipper-save-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #1b5e1b 0%, #388e3c 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(46, 125, 46, 0.3);
+}
+
+.shipper-save-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.shipper-cancel-btn {
+  background: linear-gradient(135deg, #d32f2f 0%, #f44336 100%);
+  color: white;
+}
+
+.shipper-cancel-btn:hover {
+  background: linear-gradient(135deg, #b71c1c 0%, #d32f2f 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(211, 47, 47, 0.3);
+}
+
+/* Edit Button Styles */
+.shipper-edit-btn {
+  background: linear-gradient(135deg, #8B4513 0%, #A0522D 100%);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.shipper-edit-btn:hover {
+  background: linear-gradient(135deg, #6d3410 0%, #8B4513 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(139, 69, 19, 0.3);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .shipper-info-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .shipper-info-row .shipper-info-label {
+    flex: none;
+    margin-right: 0;
+    margin-bottom: 4px;
+  }
+  
+  .shipper-info-row .shipper-info-value,
+  .shipper-info-row .shipper-inline-input,
+  .shipper-info-row .shipper-inline-select {
+    width: 100%;
+  }
+  
+  .shipper-inline-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .shipper-save-btn,
+  .shipper-cancel-btn {
+    width: 100%;
+    justify-content: center;
+    padding: 12px;
+  }
+  
+  .shipper-edit-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Inline Editing Styles */
+.shipper-inline-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.shipper-save-btn {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  color: white;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.shipper-save-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+}
+
+.shipper-save-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.shipper-cancel-btn {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.shipper-cancel-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.shipper-inline-input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 2px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  background: #ffffff;
+  color: #374151;
+}
+
+.shipper-inline-input:focus {
+  outline: none;
+  border-color: #8B4513;
+  box-shadow: 0 0 0 3px rgba(139, 69, 19, 0.1);
+}
+
+.shipper-inline-select {
+  width: 100%;
+  padding: 10px 14px;
+  border: 2px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  background: #ffffff;
+  color: #374151;
+  cursor: pointer;
+}
+
+.shipper-inline-select:focus {
+  outline: none;
+  border-color: #8B4513;
+  box-shadow: 0 0 0 3px rgba(139, 69, 19, 0.1);
+}
+
+.shipper-inline-textarea {
+  width: 100%;
+  padding: 10px 14px;
+  border: 2px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  background: #ffffff;
+  color: #374151;
+  resize: vertical;
+  min-height: 60px;
+  font-family: inherit;
+}
+
+.shipper-inline-textarea:focus {
+  outline: none;
+  border-color: #8B4513;
+  box-shadow: 0 0 0 3px rgba(139, 69, 19, 0.1);
+}
+
+/* Edit mode styling for info items */
+.shipper-info-item {
+  transition: all 0.3s ease;
+}
+
+.shipper-info-item:has(.shipper-inline-input, .shipper-inline-select, .shipper-inline-textarea) {
+  background: #f8fafc;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+/* Responsive adjustments for inline actions */
+@media (max-width: 768px) {
+  .shipper-inline-actions {
+    flex-direction: column;
+  }
+
+  .shipper-save-btn,
+  .shipper-cancel-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}

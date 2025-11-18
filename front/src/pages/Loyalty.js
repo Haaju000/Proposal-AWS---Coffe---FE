@@ -1,192 +1,310 @@
-import React from 'react';
-import Header from '../components/Header';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import loyaltyService from '../services/loyaltyService';
+import Header from '../components/Header';
+import Footer from '../components/Footer';
 import '../css/Loyalty.css';
 
 const Loyalty = () => {
   const { user } = useAuth();
+  const [loyaltyData, setLoyaltyData] = useState(null);
+  const [vouchers, setVouchers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('available');
 
-  // Mock loyalty data
-  const loyaltyData = {
-    points: 1250,
-    tier: 'Gold',
-    nextTier: 'Platinum',
-    pointsToNextTier: 750,
-    lifetimePoints: 3420,
-    memberSince: '2025-06-15'
-  };
+  useEffect(() => {
+    fetchLoyaltyData();
+  }, []);
 
-  const recentTransactions = [
-    { date: '2025-10-20', description: 'Purchase at Cozy Brew Downtown', points: 125, type: 'earned' },
-    { date: '2025-10-18', description: 'Free drink redeemed', points: -500, type: 'redeemed' },
-    { date: '2025-10-15', description: 'Purchase at Cozy Brew Mall', points: 85, type: 'earned' },
-    { date: '2025-10-12', description: 'Birthday bonus points', points: 200, type: 'bonus' }
-  ];
-
-  const rewards = [
-    { id: 1, name: 'Free Coffee', points: 500, description: 'Any size coffee drink', available: true },
-    { id: 2, name: 'Free Pastry', points: 300, description: 'Any pastry item', available: true },
-    { id: 3, name: 'Free Sandwich', points: 800, description: 'Any sandwich from our menu', available: true },
-    { id: 4, name: '20% Off Order', points: 1000, description: 'Discount on entire order', available: true },
-    { id: 5, name: 'Free Meal Combo', points: 1500, description: 'Sandwich + drink + pastry', available: false }
-  ];
-
-  const getTierColor = (tier) => {
-    switch (tier) {
-      case 'Bronze': return '#CD7F32';
-      case 'Silver': return '#C0C0C0';
-      case 'Gold': return '#FFD700';
-      case 'Platinum': return '#E5E4E2';
-      default: return '#8B4513';
+  const fetchLoyaltyData = async () => {
+    try {
+      setLoading(true);
+      const [pointsData, vouchersData] = await Promise.all([
+        loyaltyService.getMyPoints(),
+        loyaltyService.getMyVouchers()
+      ]);
+      
+      // Log để debug
+      console.log('Points data:', pointsData);
+      console.log('Vouchers data:', vouchersData);
+      
+      setLoyaltyData(pointsData);
+      setVouchers(vouchersData);
+    } catch (error) {
+      console.error('Error fetching loyalty data:', error);
+      // Set default data nếu lỗi
+      setLoyaltyData({
+        availableVouchers: 0,
+        usedVouchers: 0,
+        expiredVouchers: 0,
+        currentPoints: user?.rewardPoints || 0
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const getProgressPercentage = () => {
-    const totalNeeded = 2000; // Points needed for Platinum
-    const currentProgress = loyaltyData.points;
-    return Math.min((currentProgress / totalNeeded) * 100, 100);
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('vi-VN', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
   };
+
+  // Lọc voucher theo trạng thái
+  const availableVouchers = vouchers.filter(v => !v.isUsed && new Date(v.expirationDate) > new Date());
+  const usedVouchers = vouchers.filter(v => v.isUsed);
+  const expiredVouchers = vouchers.filter(v => !v.isUsed && new Date(v.expirationDate) <= new Date());
+
+  const getVouchersByTab = () => {
+    switch (activeTab) {
+      case 'available': return availableVouchers;
+      case 'used': return usedVouchers;
+      case 'expired': return expiredVouchers;
+      default: return availableVouchers;
+    }
+  };
+
+  const handleCopyCode = (code) => {
+    navigator.clipboard.writeText(code);
+    // Có thể thêm notification ở đây
+  };
+
+  if (loading) {
+    return (
+      <div className="loyalty-page">
+        <Header />
+        <div className="loyalty-loading-container">
+          <div className="loyalty-loading">
+            <div className="loading-spinner-large"></div>
+            <h3>Đang tải thông tin loyalty...</h3>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="loyalty-page">
       <Header />
       
       <main className="loyalty-main">
-        <div className="loyalty-container">
-          <div className="loyalty-header">
-            <h1 className="loyalty-title">Loyalty Program</h1>
-            <p className="loyalty-subtitle">Earn points with every purchase and unlock amazing rewards</p>
+        {/* Hero Section */}
+        <section className="loyalty-hero">
+          <div className="loyalty-hero-bg"></div>
+          <div className="loyalty-container">
+            <div className="loyalty-hero-content">
+              <h1 className="loyalty-title">Chương trình khách hàng thân thiết</h1>
+              <p className="loyalty-subtitle">Tích điểm với mỗi lần mua và nhận voucher giảm giá hấp dẫn</p>
+            </div>
           </div>
+        </section>
 
-          <div className="loyalty-content">
-            {/* Points Summary */}
-            <div className="points-card">
-              <div className="points-header">
-                <div className="tier-badge" style={{ backgroundColor: getTierColor(loyaltyData.tier) }}>
-                  <span>{loyaltyData.tier}</span>
-                </div>
-                <div className="points-info">
-                  <h2 className="current-points">{loyaltyData.points.toLocaleString()}</h2>
-                  <p className="points-label">Available Points</p>
-                </div>
-              </div>
-
-              <div className="tier-progress">
-                <div className="progress-info">
-                  <span>Progress to {loyaltyData.nextTier}</span>
-                  <span>{loyaltyData.pointsToNextTier} points to go</span>
-                </div>
-                <div className="progress-bar">
-                  <div 
-                    className="progress-fill" 
-                    style={{ width: `${getProgressPercentage()}%` }}
-                  ></div>
-                </div>
-              </div>
-
-              <div className="loyalty-stats">
-                <div className="stat-item">
-                  <span className="stat-value">{loyaltyData.lifetimePoints.toLocaleString()}</span>
-                  <span className="stat-label">Lifetime Points</span>
-                </div>
-                <div className="stat-item">
-                  <span className="stat-value">
-                    {new Date(loyaltyData.memberSince).toLocaleDateString('en-US', { 
-                      month: 'short', 
-                      year: 'numeric' 
-                    })}
+        {/* Stats Section */}
+        <section className="loyalty-stats-section">
+          <div className="loyalty-container">
+            <div className="loyalty-user-card">
+              <div className="user-card-header">
+                <div className="user-avatar-xl">
+                  <span className="user-initials-xl">
+                    {user?.firstName ? 
+                      (user.firstName.charAt(0) + (user.lastName ? user.lastName.charAt(0) : '')).toUpperCase() :
+                      user?.username?.charAt(0).toUpperCase()
+                    }
                   </span>
-                  <span className="stat-label">Member Since</span>
                 </div>
+                <div className="user-details-xl">
+                  <h2 className="user-name-xl">
+                    {user?.firstName && user?.lastName ? 
+                      `${user.firstName} ${user.lastName}` : 
+                      user?.username
+                    }
+                  </h2>
+                  <p className="user-status">Khách hàng thân thiết</p>
+                  
+                  {/* Hiển thị điểm thưởng */}
+                  {(loyaltyData || user?.rewardPoints !== undefined) && (
+                    <div className="user-loyalty-points">
+                      <div className="points-display">
+                        <div className="points-icon">
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                            <path d="M12 2L15.09 8.26L22 9L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9L8.91 8.26L12 2Z" fill="#8B4513"/>
+                          </svg>
+                        </div>
+                        <div className="points-info">
+                          <span className="points-number">
+                            {loyaltyData?.currentPoints !== undefined ? loyaltyData.currentPoints : (user?.rewardPoints || 0)}
+                          </span>
+                          <span className="points-label">điểm thưởng</span>
+                        </div>
+                      </div>
+                      <div className="points-progress">
+                        <div className="progress-bar-container">
+                          <div 
+                            className="progress-bar-fill"
+                            style={{
+                              width: `${Math.min(((loyaltyData?.currentPoints !== undefined ? loyaltyData.currentPoints : (user?.rewardPoints || 0)) % 100), 100)}%`
+                            }}
+                          ></div>
+                        </div>
+                        <span className="progress-text">
+                          {(loyaltyData?.currentPoints !== undefined ? loyaltyData.currentPoints : (user?.rewardPoints || 0)) >= 100 ? 
+                            'Đã đủ điểm để đổi voucher!' : 
+                            `Còn ${100 - ((loyaltyData?.currentPoints !== undefined ? loyaltyData.currentPoints : (user?.rewardPoints || 0)) % 100)} điểm để nhận voucher`
+                          }
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              
+            </div>
+          </div>
+        </section>
+
+        {/* Vouchers Section */}
+        <section className="loyalty-vouchers-section">
+          <div className="loyalty-container">
+            <div className="vouchers-header">
+              <h2>Voucher của bạn</h2>
+              <div className="voucher-tabs">
+                <button 
+                  className={`tab-btn ${activeTab === 'available' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('available')}
+                >
+                  Khả dụng ({availableVouchers.length})
+                </button>
+                <button 
+                  className={`tab-btn ${activeTab === 'used' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('used')}
+                >
+                  Đã dùng ({usedVouchers.length})
+                </button>
+                <button 
+                  className={`tab-btn ${activeTab === 'expired' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('expired')}
+                >
+                  Hết hạn ({expiredVouchers.length})
+                </button>
               </div>
             </div>
 
-            {/* Available Rewards */}
-            <div className="rewards-section">
-              <h2 className="section-title">Available Rewards</h2>
-              <div className="rewards-grid">
-                {rewards.map(reward => (
-                  <div key={reward.id} className={`reward-card ${!reward.available ? 'unavailable' : ''}`}>
-                    <div className="reward-icon">
-                      {reward.name.includes('Coffee') && '☕'}
-                      {reward.name.includes('Pastry') && '🥐'}
-                      {reward.name.includes('Sandwich') && '🥪'}
-                      {reward.name.includes('Off') && '💰'}
-                      {reward.name.includes('Combo') && '🍽️'}
-                    </div>
-                    <div className="reward-info">
-                      <h3 className="reward-name">{reward.name}</h3>
-                      <p className="reward-description">{reward.description}</p>
-                      <div className="reward-points">{reward.points} points</div>
-                    </div>
-                    <button 
-                      className={`redeem-btn ${loyaltyData.points >= reward.points && reward.available ? 'active' : 'disabled'}`}
-                      disabled={loyaltyData.points < reward.points || !reward.available}
-                    >
-                      {loyaltyData.points >= reward.points && reward.available ? 'Redeem' : 'Not Available'}
-                    </button>
+            <div className="vouchers-content">
+              {getVouchersByTab().length === 0 ? (
+                <div className="vouchers-empty">
+                  <div className="empty-icon">
+                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none">
+                      <path d="M12 2L15.09 8.26L22 9L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9L8.91 8.26L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
                   </div>
-                ))}
-              </div>
+                  <h3>
+                    {activeTab === 'available' && 'Chưa có voucher khả dụng'}
+                    {activeTab === 'used' && 'Chưa sử dụng voucher nào'}
+                    {activeTab === 'expired' && 'Không có voucher hết hạn'}
+                  </h3>
+                  <p>
+                    {activeTab === 'available' && 'Tiếp tục mua sắm để tích điểm và nhận voucher!'}
+                    {activeTab === 'used' && 'Sử dụng voucher để nhận ưu đãi tuyệt vời!'}
+                    {activeTab === 'expired' && 'Hãy sử dụng voucher trước khi hết hạn!'}
+                  </p>
+                </div>
+              ) : (
+                <div className="vouchers-grid">
+                  {getVouchersByTab().map((voucher, index) => (
+                    <div key={index} className={`voucher-card ${activeTab}`}>
+                      <div className="voucher-card-header">
+                        <div className="voucher-type-icon">
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                            <path d="M12 2L15.09 8.26L22 9L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9L8.91 8.26L12 2Z" fill="currentColor"/>
+                          </svg>
+                        </div>
+                        <span className="voucher-status-badge">
+                          {activeTab === 'available' && 'Khả dụng'}
+                          {activeTab === 'used' && 'Đã dùng'}
+                          {activeTab === 'expired' && 'Hết hạn'}
+                        </span>
+                      </div>
+                      
+                      <div className="voucher-card-body">
+                        <div className="voucher-value">
+                          Giảm {Math.round(voucher.discountValue * 100)}%
+                        </div>
+                        <div className="voucher-code">
+                          <span>Mã: {voucher.code}</span>
+                          {activeTab === 'available' && (
+                            <button 
+                              className="copy-btn"
+                              onClick={() => handleCopyCode(voucher.code)}
+                              title="Copy mã voucher"
+                            >
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                                <path d="M16 4H18C19.1 4 20 4.9 20 6V18C20 19.1 19.1 20 18 20H6C4.9 20 4 19.1 4 18V6C4 4.9 4.9 4 6 4H8M16 4V2M8 4V2M8 4H16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                              </svg>
+                            </button>
+                          )}
+                        </div>
+                        <div className="voucher-expiry">
+                          {activeTab === 'expired' ? 'Đã hết hạn' : 'Hết hạn'}: {formatDate(voucher.expirationDate)}
+                        </div>
+                      </div>
+                      
+                      {activeTab === 'available' && (
+                        <div className="voucher-card-footer">
+                          <button className="use-voucher-btn">
+                            Sử dụng ngay
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
+          </div>
+        </section>
 
-            {/* Recent Transactions */}
-            <div className="transactions-section">
-              <h2 className="section-title">Recent Activity</h2>
-              <div className="transactions-list">
-                {recentTransactions.map((transaction, index) => (
-                  <div key={index} className="transaction-item">
-                    <div className="transaction-date">
-                      {new Date(transaction.date).toLocaleDateString('en-US', { 
-                        month: 'short', 
-                        day: 'numeric' 
-                      })}
-                    </div>
-                    <div className="transaction-details">
-                      <span className="transaction-description">{transaction.description}</span>
-                      <span className={`transaction-points ${transaction.type}`}>
-                        {transaction.points > 0 ? '+' : ''}{transaction.points} points
-                      </span>
-                    </div>
-                    <div className={`transaction-type ${transaction.type}`}>
-                      {transaction.type === 'earned' && '💰'}
-                      {transaction.type === 'redeemed' && '🎁'}
-                      {transaction.type === 'bonus' && '⭐'}
-                    </div>
-                  </div>
-                ))}
-              </div>
+        {/* How it works */}
+        <section className="loyalty-how-section">
+          <div className="loyalty-container">
+            <div className="how-header">
+              <h2>Cách thức hoạt động</h2>
+              <p>Chương trình loyalty points đơn giản và dễ sử dụng</p>
             </div>
-
-            {/* How It Works */}
-            <div className="how-it-works">
-              <h2 className="section-title">How It Works</h2>
-              <div className="steps-grid">
-                <div className="step-card">
-                  <div className="step-number">1</div>
-                  <h3>Make Purchases</h3>
-                  <p>Earn 10 points for every $1 spent at any Cozy Brew location</p>
+            
+            <div className="how-steps">
+              <div className="step-card">
+                <div className="step-number">1</div>
+                <div className="step-content">
+                  <h3>Mua sắm</h3>
+                  <p>Mỗi 10.000 VNĐ = 1 điểm thưởng</p>
                 </div>
-                <div className="step-card">
-                  <div className="step-number">2</div>
-                  <h3>Collect Points</h3>
-                  <p>Points are automatically added to your account after each purchase</p>
+              </div>
+              
+              <div className="step-card">
+                <div className="step-number">2</div>
+                <div className="step-content">
+                  <h3>Tích điểm</h3>
+                  <p>Tích đủ 100 điểm để nhận voucher giảm giá 10%</p>
                 </div>
-                <div className="step-card">
-                  <div className="step-number">3</div>
-                  <h3>Redeem Rewards</h3>
-                  <p>Use your points to get free drinks, food, and exclusive discounts</p>
-                </div>
-                <div className="step-card">
-                  <div className="step-number">4</div>
-                  <h3>Level Up</h3>
-                  <p>Reach higher tiers for better rewards and exclusive perks</p>
+              </div>
+              
+              <div className="step-card">
+                <div className="step-number">3</div>
+                <div className="step-content">
+                  <h3>Sử dụng voucher</h3>
+                  <p>Áp dụng voucher cho đơn hàng tiếp theo của bạn</p>
                 </div>
               </div>
             </div>
           </div>
-        </div>
+        </section>
       </main>
+      
+      <Footer />
     </div>
   );
 };
