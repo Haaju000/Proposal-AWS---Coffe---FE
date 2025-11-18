@@ -286,28 +286,45 @@ const authService = {
     }
   },
 
-  // Logout function - gọi API logout của Cognito
+  // Logout function - hỗ trợ cả Cognito và Local auth
   logout: async () => {
     try {
+      const user = authService.getCurrentUser();
       const accessToken = localStorage.getItem('access_token');
-      if (accessToken) {
-        // Cognito GlobalSignOut
+      
+      console.log('🚪 Logout called for user:', user);
+      console.log('🔑 Access token exists:', !!accessToken);
+      console.log('🔍 User authType:', user?.authType);
+      
+      // Nếu là Cognito user (User/Admin), gọi API logout
+      if (accessToken && user?.authType === 'Cognito') {
+        console.log('📞 Calling Cognito logout API...');
         await apiClient.post('/Auth/logout', {}, {
           headers: {
             'Authorization': `Bearer ${accessToken}`
           }
         });
+        console.log('✅ Cognito logout API success');
+      } else {
+        console.log('⏭️ Skipping logout API call (Local auth or no token)');
       }
+      // Nếu là Shipper (Local auth), không cần gọi API logout
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error('❌ Logout API error:', error);
       // Vẫn logout ở frontend dù API fail
     } finally {
       // Clear tất cả tokens và user data
+      console.log('🧹 Clearing localStorage...');
       localStorage.removeItem('access_token');
       localStorage.removeItem('id_token');
       localStorage.removeItem('refresh_token');
       localStorage.removeItem('local_token');
       localStorage.removeItem('user');
+      
+      console.log('🚪 User logged out successfully');
+      
+      // Redirect to login page
+      window.location.href = '/login';
     }
   },
 
@@ -397,21 +414,6 @@ const authService = {
       return localStorage.getItem('local_token');
     }
     return localStorage.getItem('access_token');
-  },
-
-  // Logout function
-  logout: () => {
-    // Clear all tokens and user data
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('id_token'); 
-    localStorage.removeItem('refresh_token');
-    localStorage.removeItem('local_token');
-    localStorage.removeItem('user');
-    
-    console.log('🚪 User logged out successfully');
-    
-    // Redirect to login page
-    window.location.href = '/login';
   }
 };
 
