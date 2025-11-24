@@ -1852,6 +1852,10 @@ const ShippersContent = ({ showNotification, showConfirmModal }) => {
         shipperService.getPendingShippers()
       ]);
       
+      // 🔍 Debug: Log sample shipper data structure
+      console.log('🔍 Debug all shippers sample:', allShippersData?.[0]);
+      console.log('🔍 Debug pending shippers sample:', pendingShippersData?.[0]);
+      
       setShippers(allShippersData);
       setPendingShippers(pendingShippersData);
       
@@ -1872,7 +1876,9 @@ const ShippersContent = ({ showNotification, showConfirmModal }) => {
       `Bạn có chắc chắn muốn phê duyệt tài khoản shipper "${shipper.fullName || shipper.username}"?`,
       async () => {
         try {
-          await shipperService.approveShipper(shipper.userId);
+          // ✅ Backend trả về shipperId thay vì userId
+          const userId = shipper.shipperId || shipper.userId || shipper.id;
+          await shipperService.approveShipper(userId);
           showNotification('Thành công', 'Phê duyệt shipper thành công', 'success');
           loadShippersData(false);
         } catch (error) {
@@ -1895,8 +1901,10 @@ const ShippersContent = ({ showNotification, showConfirmModal }) => {
     }
 
     try {
-      console.log('🔄 Rejecting shipper:', rejectModal.userId, 'with reason:', rejectReason);
-      const result = await shipperService.rejectShipper(rejectModal.userId, rejectReason);
+      // ✅ Backend trả về shipperId thay vì userId
+      const userId = rejectModal.shipperId || rejectModal.userId || rejectModal.id;
+      console.log('🔄 Rejecting shipper:', userId, 'with reason:', rejectReason);
+      const result = await shipperService.rejectShipper(userId, rejectReason);
       console.log('✅ Reject result:', result);
       
       showNotification('Thành công', 'Từ chối shipper thành công', 'success');
@@ -1919,17 +1927,78 @@ const ShippersContent = ({ showNotification, showConfirmModal }) => {
   };
 
   const handleResetPassword = (shipper) => {
+    // ✅ Validate userId - Backend trả về shipperId
+    const userId = shipper.shipperId || shipper.userId || shipper.id;
+    if (!userId) {
+      console.error('❌ No valid userId found for shipper:', shipper);
+      showNotification('Lỗi', 'Không tìm thấy ID shipper hợp lệ', 'error');
+      return;
+    }
+
     showConfirmModal(
       'Reset mật khẩu Shipper',
-      `Bạn có chắc chắn muốn reset mật khẩu cho shipper "${shipper.fullName || shipper.username}"? Mật khẩu mới sẽ được gửi qua email.`,
+      `Bạn có chắc chắn muốn reset mật khẩu cho shipper "${shipper.fullName || shipper.username || shipper.email}"? Mật khẩu mới sẽ được gửi qua email.`,
       async () => {
         try {
-          await shipperService.resetShipperPassword(shipper.userId);
+          console.log('🔑 Resetting password for userId:', userId);
+          await shipperService.resetShipperPassword(userId);
           showNotification('Thành công', 'Reset mật khẩu shipper thành công', 'success');
         } catch (error) {
-          showNotification('Lỗi', 'Không thể reset mật khẩu shipper', 'error');
+          console.error('❌ Reset password error:', error);
+          showNotification('Lỗi', `Không thể reset mật khẩu shipper: ${error.message}`, 'error');
         }
       }
+    );
+  };
+
+  const handleLockShipper = (shipper) => {
+    // 🔍 Debug: Check shipper data structure
+    console.log('🔍 Debug shipper data:', {
+      shipper,
+      userId: shipper.userId,
+      shipperId: shipper.shipperId, // ✅ Backend trả về shipperId
+      id: shipper.id,
+      status: shipper.status,
+      isLocked: shipper.isLocked
+    });
+
+    // ✅ Validate userId - Backend trả về shipperId
+    const userId = shipper.shipperId || shipper.userId || shipper.id;
+    if (!userId) {
+      console.error('❌ No valid userId found for shipper:', shipper);
+      showNotification('Lỗi', 'Không tìm thấy ID shipper hợp lệ', 'error');
+      return;
+    }
+
+    const isLocked = shipper.status?.toLowerCase() === 'locked' || shipper.isLocked || !shipper.isActive;
+    const action = isLocked ? 'mở khóa' : 'khóa';
+    const actionTitle = isLocked ? 'Mở khóa' : 'Khóa';
+    
+    showConfirmModal(
+      `${actionTitle} tài khoản Shipper`,
+      `Bạn có chắc chắn muốn ${action} tài khoản shipper "${shipper.fullName || shipper.username || shipper.email}"? ${
+        isLocked 
+          ? 'Shipper sẽ có thể đăng nhập lại sau khi được mở khóa.' 
+          : 'Shipper sẽ không thể đăng nhập sau khi bị khóa.'
+      }`,
+      async () => {
+        try {
+          console.log(`🔄 ${actionTitle}ing shipper with userId:`, userId);
+          
+          if (isLocked) {
+            await shipperService.unlockShipper(userId);
+            showNotification('Thành công', 'Mở khóa tài khoản shipper thành công', 'success');
+          } else {
+            await shipperService.lockShipper(userId);
+            showNotification('Thành công', 'Khóa tài khoản shipper thành công', 'success');
+          }
+          loadShippersData(false); // Refresh danh sách sau khi thay đổi
+        } catch (error) {
+          console.error('❌ Lock/Unlock error:', error);
+          showNotification('Lỗi', `Không thể ${action} tài khoản shipper: ${error.message}`, 'error');
+        }
+      },
+      'danger'
     );
   };
 
@@ -2008,7 +2077,7 @@ const ShippersContent = ({ showNotification, showConfirmModal }) => {
                 <th>Biển số xe</th>
                 <th>Số tài khoản</th>
                 <th>Ngân hàng</th>
-                
+                <th>Thao tác</th>
               </tr>
             </thead>
             <tbody>
@@ -2020,7 +2089,7 @@ const ShippersContent = ({ showNotification, showConfirmModal }) => {
                 </tr>
               ) : (
                 getDisplayShippers().map((shipper) => (
-                  <tr key={shipper.userId}>
+                  <tr key={shipper.shipperId || shipper.userId || shipper.id}>
                     <td>
                       <div className="shipper-info">
                         <FiTruck className="shipper-icon" />
@@ -2047,18 +2116,56 @@ const ShippersContent = ({ showNotification, showConfirmModal }) => {
                               onClick={() => handleApproveShipper(shipper)}
                               title="Phê duyệt shipper"
                             >
-                              <FiCheck size={16} />
+                              <FiCheck size={14} />
+                              <span>Duyệt</span>
                             </button>
                             <button
                               className="btn btn-sm btn-danger deny-btn"
                               onClick={() => handleRejectShipper(shipper)}
                               title="Từ chối shipper"
                             >
-                              <FiX size={16} />
+                              <FiX size={14} />
+                              <span>Từ chối</span>
                             </button>
                           </>
                         )}
                         
+                        {/* Actions for "Tất cả" tab */}
+                        {activeTab === 'all' && (
+                          <>
+                            {(() => {
+                              // ✅ Backend trả về isActive field để check lock status
+                              const isLocked = !shipper.isActive || shipper.status?.toLowerCase() === 'locked';
+                              return (
+                                <button
+                                  className={`btn btn-sm ${isLocked ? 'btn-success unlock-btn' : 'btn-warning lock-btn'}`}
+                                  onClick={() => handleLockShipper(shipper)}
+                                  title={isLocked ? 'Mở khóa tài khoản shipper' : 'Khóa tài khoản shipper'}
+                                >
+                                  {isLocked ? (
+                                    <>
+                                      <FiCheck size={14} />
+                                      <span>Mở khóa</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <FiLock size={14} />
+                                      <span>Khóa</span>
+                                    </>
+                                  )}
+                                </button>
+                              );
+                            })()}
+                            <button
+                              className="btn btn-sm btn-info reset-btn"
+                              onClick={() => handleResetPassword(shipper)}
+                              title="Reset mật khẩu shipper"
+                            >
+                              <FiKey size={14} />
+                              <span>Reset</span>
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
