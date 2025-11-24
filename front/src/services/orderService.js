@@ -79,24 +79,6 @@ const orderService = {
     }
   },
 
-  // Apply voucher to order
-  applyVoucher: async (orderId, voucherCode) => {
-    try {
-      console.log('🎫 Applying voucher:', { orderId, voucherCode });
-      const response = await apiClient.post(`/Order/${orderId}/apply-voucher`, {
-        voucherCode: voucherCode
-      });
-      console.log('✅ Voucher applied successfully:', response.data);
-      return response.data;
-    } catch (error) {
-      console.error('❌ Apply voucher error:', error);
-      if (error.response?.data?.error) {
-        throw new Error(error.response.data.error);
-      }
-      throw error;
-    }
-  },
-
   // Get order by ID
   getOrderById: async (orderId) => {
     try {
@@ -199,10 +181,10 @@ const orderService = {
     }
   },
 
-  // Update order status (Admin only)
+  // Update order status (Admin only) - Generic status update
   updateOrderStatus: async (orderId, status) => {
     try {
-      console.log('📝 Updating order status:', { orderId, status });
+      console.log('📋 Updating order status:', { orderId, status });
       const response = await apiClient.put(`/Order/${orderId}/status`, {
         status: status
       });
@@ -210,6 +192,22 @@ const orderService = {
       return response.data;
     } catch (error) {
       console.error('❌ Update order status error:', error);
+      if (error.response?.data?.error) {
+        throw new Error(error.response.data.error);
+      }
+      throw error;
+    }
+  },
+
+  // ✅ Confirm order (Admin only) - Specific confirm action for shipper workflow
+  confirmOrder: async (orderId) => {
+    try {
+      console.log('✅ Confirming order for shipper pickup:', { orderId });
+      const response = await apiClient.post(`/Admin/orders/${orderId}/confirm`);
+      console.log('✅ Order confirmed successfully - now available for shipper:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Confirm order error:', error);
       if (error.response?.data?.error) {
         throw new Error(error.response.data.error);
       }
@@ -245,7 +243,10 @@ const orderService = {
   getStatusText: (status) => {
     const statusMap = {
       'Pending': 'Chờ xử lý',
-      'Processing': 'Đang xử lý', 
+      'Processing': 'Đang xử lý',
+      'Confirmed': 'Đã xác nhận', // ✅ Thêm trạng thái confirmed
+      'Shipping': 'Đang giao hàng',
+      'Delivered': 'Đã giao hàng', 
       'Completed': 'Hoàn thành',
       'Cancelled': 'Đã hủy'
     };

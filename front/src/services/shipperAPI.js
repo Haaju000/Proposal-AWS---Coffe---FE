@@ -43,6 +43,11 @@ const shipperAPI = {
   getAvailableOrders: async () => {
     try {
       console.log('🔍 Fetching available orders from: /api/Shipper/orders/available');
+      console.log('🔑 Request headers will include:', {
+        'Authorization': `Bearer ${authService.getToken() ? '[TOKEN_PRESENT]' : '[NO_TOKEN]'}`,
+        'Content-Type': 'application/json'
+      });
+      
       const response = await shipperAPIService.get('/api/Shipper/orders/available');
       console.log('✅ Available orders response:', response.data);
       return response.data || [];
@@ -59,6 +64,14 @@ const shipperAPI = {
         console.warn('🔍 Endpoint not found - Backend may not be running');
         return [];
       }
+      if (error.response?.status === 403) {
+        throw new Error('Không có quyền truy cập endpoint này. Kiểm tra quyền shipper.');
+      }
+      if (error.response?.status >= 500) {
+        throw new Error('Lỗi server. Vui lòng thử lại sau.');
+      }
+      
+      console.warn('🔄 Returning empty array due to error');
       return [];
     }
   },

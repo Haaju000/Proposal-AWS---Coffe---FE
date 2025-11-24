@@ -1175,6 +1175,9 @@ const OrdersContent = ({ showNotification }) => {
     const statusMap = {
       'pending': 'Chờ thanh toán',
       'processing': 'Đang xử lý', 
+      'confirmed': 'Đã xác nhận',
+      'shipping': 'Đang giao hàng',
+      'delivered': 'Đã giao',
       'completed': 'Hoàn thành',
       'all': 'Tất cả'
     };
@@ -1224,7 +1227,16 @@ const OrdersContent = ({ showNotification }) => {
       setUpdating(prev => ({ ...prev, [orderId]: true }));
       console.log(`🔄 Updating order ${orderId} to status: ${newStatus}`);
       
-      await orderService.updateOrderStatus(orderId, newStatus);
+      // ✅ Use correct API endpoint based on action
+      if (newStatus === 'Confirmed') {
+        // Use specific confirm API for shipper workflow
+        await orderService.confirmOrder(orderId);
+        console.log('✅ Order confirmed via /Admin/orders/{id}/confirm - now available for shipper');
+      } else {
+        // Use generic status update for other statuses
+        await orderService.updateOrderStatus(orderId, newStatus);
+        console.log(`✅ Order status updated to: ${newStatus}`);
+      }
       
       showNotification('Thành công!', `Đơn hàng đã được chuyển sang "${getStatusText(newStatus)}"`, 'success');
       
@@ -1232,15 +1244,20 @@ const OrdersContent = ({ showNotification }) => {
       setOrders(prevOrders => 
         prevOrders.map(order => 
           order.orderId === orderId 
-            ? { ...order, status: newStatus, completedAt: newStatus === 'Completed' ? new Date().toISOString() : order.completedAt }
+            ? { 
+                ...order, 
+                status: newStatus, 
+                confirmedAt: newStatus === 'Confirmed' ? new Date().toISOString() : order.confirmedAt,
+                completedAt: newStatus === 'Completed' ? new Date().toISOString() : order.completedAt 
+              }
             : order
         )
       );
       
       console.log('✅ Order status updated successfully');
     } catch (error) {
-      console.error('❌ Error updating order status:', error);
-      showNotification('Lỗi!', 'Không thể cập nhật trạng thái đơn hàng: ' + error.message, 'error');
+      console.error('❌ Failed to update order status:', error);
+      showNotification('Lỗi!', `Không thể cập nhật đơn hàng: ${error.message}`, 'error');
     } finally {
       setUpdating(prev => ({ ...prev, [orderId]: false }));
     }
@@ -1251,17 +1268,23 @@ const OrdersContent = ({ showNotification }) => {
     all: orders.length,
     pending: orders.filter(o => o.status?.toLowerCase() === 'pending').length,
     processing: orders.filter(o => o.status?.toLowerCase() === 'processing').length,
+    confirmed: orders.filter(o => o.status?.toLowerCase() === 'confirmed').length,
+    shipping: orders.filter(o => o.status?.toLowerCase() === 'shipping').length,
+    delivered: orders.filter(o => o.status?.toLowerCase() === 'delivered').length,
     completed: orders.filter(o => o.status?.toLowerCase() === 'completed').length
   };
 
-  // Sắp xếp đơn hàng: ưu tiên processing, sau đó completed, cuối cùng pending
+  // Sắp xếp đơn hàng: ưu tiên processing, confirmed, completed, cuối cùng pending
   const getSortPriority = (status) => {
     const priorities = {
-      'processing': 1,
-      'completed': 2,  
-      'pending': 3
+      'processing': 1, // Cao nhất - cần admin xác nhận
+      'confirmed': 2,  // Chờ shipper nhận
+      'shipping': 3,   // Đang giao hàng
+      'delivered': 4,  // Cần admin hoàn thành
+      'completed': 5,  // Đã xong
+      'pending': 6     // Thấp nhất - chờ thanh toán
     };
-    return priorities[status?.toLowerCase()] || 4;
+    return priorities[status?.toLowerCase()] || 7;
   };
 
   const filteredOrders = orders
@@ -1357,6 +1380,27 @@ const OrdersContent = ({ showNotification }) => {
         >
           <span className="tab-label">Đang xử lý</span>
           <span className="tab-count">{orderCounts.processing}</span>
+        </button>
+        <button 
+          className={`status-tab confirmed ${activeStatus === 'confirmed' ? 'active' : ''}`}
+          onClick={() => setActiveStatus('confirmed')}
+        >
+          <span className="tab-label">Đã xác nhận</span>
+          <span className="tab-count">{orderCounts.confirmed}</span>
+        </button>
+        <button 
+          className={`status-tab shipping ${activeStatus === 'shipping' ? 'active' : ''}`}
+          onClick={() => setActiveStatus('shipping')}
+        >
+          <span className="tab-label">Đang giao hàng</span>
+          <span className="tab-count">{orderCounts.shipping}</span>
+        </button>
+        <button 
+          className={`status-tab delivered ${activeStatus === 'delivered' ? 'active' : ''}`}
+          onClick={() => setActiveStatus('delivered')}
+        >
+          <span className="tab-label">Chờ hoàn thành</span>
+          <span className="tab-count">{orderCounts.delivered}</span>
         </button>
         <button 
           className={`status-tab completed ${activeStatus === 'completed' ? 'active' : ''}`}
@@ -1541,10 +1585,34 @@ const OrdersContent = ({ showNotification }) => {
                     {order.status?.toLowerCase() === 'processing' && (
                       <button
                         className="action-btn confirm-btn"
-                        onClick={() => handleUpdateOrderStatus(order.orderId, 'completed')}
+                        onClick={() => handleUpdateOrderStatus(order.orderId, 'Confirmed')}
                         disabled={updating[order.orderId]}
+                        title="Xác nhận đơn hàng để shipper có thể nhận"
                       >
-                        {updating[order.orderId] ? 'Đang xử lý...' : 'Xác nhận'}
+                        {updating[order.orderId] ? 'Đang xử lý...' : '✅ Xác nhận cho Shipper'}
+                      </button>
+                    )}
+
+                    {order.status?.toLowerCase() === 'confirmed' && (
+                      <span className="confirmed-note">
+                        ✅ Đã xác nhận - Chờ Shipper nhận
+                      </span>
+                    )}
+
+                    {order.status?.toLowerCase() === 'shipping' && (
+                      <span className="shipping-note">
+                        🚚 Đang giao hàng
+                      </span>
+                    )}
+
+                    {order.status?.toLowerCase() === 'delivered' && (
+                      <button
+                        className="action-btn complete-btn"
+                        onClick={() => handleUpdateOrderStatus(order.orderId, 'Completed')}
+                        disabled={updating[order.orderId]}
+                        title="Hoàn thành đơn hàng và tặng điểm loyalty"
+                      >
+                        {updating[order.orderId] ? 'Đang xử lý...' : '🎉 Hoàn thành & Tặng điểm'}
                       </button>
                     )}
                     
@@ -1553,7 +1621,7 @@ const OrdersContent = ({ showNotification }) => {
                     )}
                     
                     {order.status?.toLowerCase() === 'completed' && (
-                      <span className="completed-note">Đã hoàn thành</span>
+                      <span className="completed-note">✅ Đã hoàn thành</span>
                     )}
                   </td>
                 </tr>

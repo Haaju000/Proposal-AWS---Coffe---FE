@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
 import orderService from '../services/orderService';
 import paymentService from '../services/paymentService';
+import loyaltyService from '../services/loyaltyService';
 import '../css/CheckoutModal.css';
+import '../css/VoucherSection.css';
 
 const CheckoutModal = ({ isOpen, onClose, onOrderSuccess }) => {
   const { user } = useAuth();
@@ -21,6 +23,118 @@ const CheckoutModal = ({ isOpen, onClose, onOrderSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false); // ✅ Prevent double submission
+  
+  // Voucher states
+  const [availableVouchers, setAvailableVouchers] = useState([]);
+  const [selectedVoucher, setSelectedVoucher] = useState(null);
+  const [voucherDiscount, setVoucherDiscount] = useState(0);
+  const [finalTotal, setFinalTotal] = useState(cartTotal);
+  const [showVoucherSection, setShowVoucherSection] = useState(false);
+  const [voucherLoading, setVoucherLoading] = useState(false);
+  const [loyaltyPoints, setLoyaltyPoints] = useState(0);
+  const [loyaltyLoading, setLoyaltyLoading] = useState(false);
+
+  // Load available vouchers when modal opens
+  useEffect(() => {
+    if (isOpen && user) {
+      loadAvailableVouchers();
+    }
+  }, [isOpen, user]);
+
+  // Update final total when cart total or voucher changes
+  useEffect(() => {
+    calculateFinalTotal();
+  }, [cartTotal, selectedVoucher]);
+
+  const loadAvailableVouchers = async () => {
+    try {
+      setVoucherLoading(true);
+      setLoyaltyLoading(true);
+      
+      // Load vouchers and loyalty points in parallel
+      const [vouchers, pointsData] = await Promise.all([
+        loyaltyService.getMyAvailableVouchers(),
+        loyaltyService.getMyPoints().catch(() => ({ currentPoints: user?.rewardPoints || 0 }))
+      ]);
+      
+      console.log('📊 Loaded vouchers and points:', { vouchers, pointsData });
+      setAvailableVouchers(vouchers || []);
+      setLoyaltyPoints(pointsData?.currentPoints ?? (user?.rewardPoints || 0));
+      
+      // 🎫 Auto-select voucher from Loyalty page navigation
+      const preSelectedVoucher = sessionStorage.getItem('selectedVoucherForUse');
+      if (preSelectedVoucher && vouchers) {
+        try {
+          const voucherFromStorage = JSON.parse(preSelectedVoucher);
+          const matchingVoucher = vouchers.find(v => v.code === voucherFromStorage.code);
+          if (matchingVoucher) {
+            setSelectedVoucher(matchingVoucher);
+            setShowVoucherSection(true); // Auto-expand voucher section
+            console.log('🎯 Auto-selected voucher from Loyalty page:', matchingVoucher);
+          }
+          // Clear from sessionStorage after using
+          sessionStorage.removeItem('selectedVoucherForUse');
+        } catch (error) {
+          console.warn('Could not parse selected voucher from storage:', error);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading vouchers and points:', error);
+      setAvailableVouchers([]);
+      setLoyaltyPoints(user?.rewardPoints || 0);
+    } finally {
+      setVoucherLoading(false);
+      setLoyaltyLoading(false);
+    }
+  };
+
+  const calculateFinalTotal = () => {
+    let total = cartTotal;
+    let discount = 0;
+
+    if (selectedVoucher) {
+      discount = Math.round(cartTotal * selectedVoucher.discountValue);
+      total = cartTotal - discount;
+    }
+
+    setVoucherDiscount(discount);
+    setFinalTotal(Math.max(total, 0));
+  };
+
+  const handleVoucherSelect = (voucher) => {
+    if (selectedVoucher?.code === voucher.code) {
+      // Deselect if same voucher is clicked
+      setSelectedVoucher(null);
+    } else {
+      setSelectedVoucher(voucher);
+    }
+  };
+
+  // 🔍 Validate voucher trước khi submit order
+  const validateSelectedVoucher = async () => {
+    if (!selectedVoucher) return { isValid: true };
+    
+    try {
+      const validation = await loyaltyService.validateVoucher(
+        selectedVoucher.code, 
+        cartTotal
+      );
+      
+      if (!validation.isValid) {
+        alert(`❌ Lỗi voucher: ${validation.message}`);
+        setSelectedVoucher(null); // Clear invalid voucher
+        return { isValid: false };
+      }
+      
+      console.log('✅ Voucher validation successful:', validation);
+      return { isValid: true, validation };
+    } catch (error) {
+      console.error('Voucher validation failed:', error);
+      alert(`❌ Không thể kiểm tra voucher: ${error.message}`);
+      setSelectedVoucher(null);
+      return { isValid: false };
+    }
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -80,7 +194,13 @@ const CheckoutModal = ({ isOpen, onClose, onOrderSuccess }) => {
       return;
     }
     
-    console.log('🛒 Starting order submission with cart items:', cartItems);
+    // 🔍 Validate voucher if selected
+    const voucherValidation = await validateSelectedVoucher();
+    if (!voucherValidation.isValid) {
+      return; // Stop submission if voucher invalid
+    }
+    
+    console.log('🛍️ Starting order submission with cart items:', cartItems);
     setLoading(true);
     setIsSubmitting(true); // ✅ Mark as submitting
     
@@ -156,7 +276,12 @@ const CheckoutModal = ({ isOpen, onClose, onOrderSuccess }) => {
         // Add unique identifier để backend có thể detect và prevent duplicate
         clientOrderId: uniqueClientId,
         requestTimestamp: new Date().toISOString(),
-        paymentMethod: paymentMethod // ✅ Đảm bảo payment method được gửi đến backend
+        paymentMethod: paymentMethod, // ✅ Đảm bảo payment method được gửi đến backend
+        // ✅ Thêm voucher code nếu có
+        voucherCode: selectedVoucher?.code || null,
+        originalTotal: cartTotal,
+        voucherDiscount: voucherDiscount,
+        finalTotal: finalTotal
       };
       
       console.log('🚀 Final order request with unique client ID:', orderRequest);
@@ -186,11 +311,16 @@ const CheckoutModal = ({ isOpen, onClose, onOrderSuccess }) => {
       const response = await orderService.createOrder(orderRequest);
       console.log('✅ COD Order created successfully:', response);
       
-      // Extract order info
+      // Extract order info với voucher fields
       const order = response.order || response;
       const orderId = order.id || order.orderId || 'N/A';
-      const totalPrice = order.totalPrice || order.finalPrice || cartTotal;
+      const totalPrice = order.finalPrice || order.totalPrice || finalTotal; // ✅ Use finalPrice (after voucher)
       const status = order.status || 'Pending';
+      
+      // Voucher application info từ backend response
+      const voucherApplied = response.voucherApplied || false;
+      const appliedVoucherCode = response.appliedVoucherCode || selectedVoucher?.code || null;
+      const discountAmount = response.discountAmount || voucherDiscount || 0;
       
       // Success callback
       if (onOrderSuccess) {
@@ -200,16 +330,23 @@ const CheckoutModal = ({ isOpen, onClose, onOrderSuccess }) => {
           status,
           customerInfo: formData,
           items: cartItems,
-          paymentMethod: 'COD' // ✅ Ensure COD is tracked
+          paymentMethod: 'COD',
+          voucherApplied,
+          appliedVoucherCode,
+          discountAmount
         });
       }
       
-      // ✅ Save order to localStorage with payment method
+      // ✅ Save order to localStorage with voucher info
       try {
         const orderHistory = JSON.parse(localStorage.getItem('orderHistory') || '[]');
         orderHistory.push({
           orderId,
-          totalPrice,
+          totalPrice: totalPrice,
+          originalTotal: cartTotal,
+          voucherCode: appliedVoucherCode || null,
+          voucherDiscount: discountAmount,
+          voucherApplied,
           status,
           paymentMethod: 'COD',
           customerName: formData.customerName,
@@ -217,7 +354,7 @@ const CheckoutModal = ({ isOpen, onClose, onOrderSuccess }) => {
           createdAt: new Date().toISOString()
         });
         localStorage.setItem('orderHistory', JSON.stringify(orderHistory));
-        console.log('✅ COD order saved to localStorage with payment method');
+        console.log('✅ COD order saved to localStorage with voucher info');
       } catch (error) {
         console.warn('Warning: Could not save order to localStorage:', error);
       }
@@ -226,13 +363,16 @@ const CheckoutModal = ({ isOpen, onClose, onOrderSuccess }) => {
       clearCart();
       onClose();
       
-      // Show success notification
+      // Show success notification với voucher info
+      const voucherInfo = voucherApplied && appliedVoucherCode ? 
+        `\n🎫 Voucher: ${appliedVoucherCode} (-₫${discountAmount.toLocaleString()})` : '';
+      
       alert(`🎉 Đặt hàng thành công!
 
 📋 Mã đơn hàng: #${orderId}
 👤 Khách hàng: ${formData.customerName}
 📱 SĐT: ${formData.phoneNumber}
-📍 Địa chỉ: ${formData.address}
+📍 Địa chỉ: ${formData.address}${voucherInfo}
 💰 Tổng tiền: ₫${totalPrice.toLocaleString()}
 📊 Trạng thái: ${status}
 💵 Thanh toán: Thu tiền khi giao hàng (COD)
@@ -422,9 +562,153 @@ Cảm ơn bạn đã đặt hàng! Chúng tôi sẽ liên hệ sớm nhất.`);
             ))}
           </div>
           <div className="order-total">
-            <strong>Tổng cộng: ₫{cartTotal.toLocaleString()}</strong>
+            <div className="total-breakdown">
+              <div className="total-line">
+                <span>Tổng tiền hàng:</span>
+                <span>₫{cartTotal.toLocaleString()}</span>
+              </div>
+              {selectedVoucher && (
+                <div className="total-line voucher-discount">
+                  <span>Phiếu giảm giá ({selectedVoucher.code}):</span>
+                  <span>-₫{voucherDiscount.toLocaleString()}</span>
+                </div>
+              )}
+              <div className="total-line final-total">
+                <strong>Tổng cộng: ₫{finalTotal.toLocaleString()}</strong>
+              </div>
+            </div>
           </div>
         </div>
+
+        {/* Voucher Section */}
+        {user && (
+          <div className="voucher-section">
+            <div className="voucher-header" onClick={() => setShowVoucherSection(!showVoucherSection)}>
+              <h3>
+                🎟️ Voucher giảm giá 
+                {!voucherLoading && (
+                  <span className="voucher-count">({availableVouchers.length} khả dụng)</span>
+                )}
+              </h3>
+              <button type="button" className={`voucher-toggle ${showVoucherSection ? 'expanded' : ''}`}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
+            </div>
+            
+            {showVoucherSection && (
+              <div className="voucher-content">
+                {voucherLoading ? (
+                  <div className="voucher-loading">
+                    <div className="loading-spinner"></div>
+                    <span>Đang tải voucher và điểm thưởng...</span>
+                  </div>
+                ) : availableVouchers.length === 0 ? (
+                  <div className="no-vouchers">
+                    {/* Auto-reward notification cho user có ≥100 điểm */}
+                    {loyaltyPoints >= 100 ? (
+                      <div className="auto-reward-notice">
+                        <div className="reward-icon">🎉</div>
+                        <div className="reward-content">
+                          <h4>Bạn sẽ nhận voucher tự động!</h4>
+                          <p>Với <strong>{loyaltyPoints} điểm</strong> hiện có, bạn sẽ nhận voucher giảm giá 10% ngay sau khi hoàn thành đơn hàng này!</p>
+                          <small className="reward-note">💫 Voucher sẽ tự động xuất hiện trong tài khoản của bạn</small>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="no-vouchers-content">
+                        <div className="no-vouchers-icon">🎫</div>
+                        <h4>Chưa có voucher khả dụng</h4>
+                        <p>Bạn hiện có <strong>{loyaltyPoints} điểm</strong></p>
+                        <div className="points-progress-mini">
+                          <div className="progress-bar-mini">
+                            <div 
+                              className="progress-fill-mini" 
+                              style={{ width: `${Math.min((loyaltyPoints % 100), 100)}%` }}
+                            ></div>
+                          </div>
+                          <small>Còn {100 - (loyaltyPoints % 100)} điểm để nhận voucher tự động</small>
+                        </div>
+                        <div className="encouragement">
+                          <small>💡 Mỗi đơn hàng này sẽ giúp bạn tích thêm điểm!</small>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    {/* Auto-reward notification khi có voucher và đủ điểm */}
+                    {loyaltyPoints >= 100 && (
+                      <div className="auto-reward-banner">
+                        <span className="banner-icon">✨</span>
+                        <span className="banner-text">
+                          Bonus: Bạn sẽ nhận thêm voucher mới sau đơn hàng này!
+                        </span>
+                      </div>
+                    )}
+                    
+                    <div className="vouchers-list">
+                      {availableVouchers.map((voucher) => (
+                        <div 
+                          key={voucher.code} 
+                          className={`voucher-item ${selectedVoucher?.code === voucher.code ? 'selected' : ''}`}
+                          onClick={() => handleVoucherSelect(voucher)}
+                        >
+                          <div className="voucher-info">
+                            <div className="voucher-discount">
+                              Giảm {Math.round(voucher.discountValue * 100)}%
+                            </div>
+                            <div className="voucher-details">
+                              <div className="voucher-code-section">
+                                <span className="code-label">Mã voucher:</span>
+                                <div className="code-display">
+                                  <span className="code-value">{voucher.code}</span>
+                                  <button 
+                                    type="button"
+                                    className="copy-code-btn"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      navigator.clipboard.writeText(voucher.code);
+                                      // Tạm thời hiển thị copied feedback
+                                      const btn = e.target;
+                                      const originalText = btn.innerHTML;
+                                      btn.innerHTML = '✓';
+                                      btn.style.background = '#10B981';
+                                      setTimeout(() => {
+                                        btn.innerHTML = originalText;
+                                        btn.style.background = '';
+                                      }, 1500);
+                                    }}
+                                    title="Copy mã voucher"
+                                  >
+                                    📋
+                                  </button>
+                                </div>
+                              </div>
+                              <span className="voucher-expiry">
+                                Hết hạn: {new Date(voucher.expirationDate).toLocaleDateString('vi-VN')}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="voucher-action">
+                            {selectedVoucher?.code === voucher.code ? (
+                              <span className="selected-indicator">✓ Đã chọn</span>
+                            ) : (
+                              <button type="button" className="select-voucher-btn">
+                                Chọn
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Customer Form */}
         <div className="customer-form">

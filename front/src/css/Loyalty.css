@@ -58,6 +58,144 @@
   line-height: 1.6;
 }
 
+/* Enhanced Voucher Code Display */
+.voucher-code {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 12px 0 8px 0;
+}
+
+.code-label {
+  font-size: 0.75rem;
+  color: #6B7280;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.code-value {
+  font-family: 'Courier New', monospace;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #8B4513;
+  background: rgba(139, 69, 19, 0.1);
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 2px dashed #8B4513;
+  text-align: center;
+  letter-spacing: 1px;
+  position: relative;
+}
+
+.voucher-debug {
+  margin-top: 8px;
+  padding: 4px 8px;
+  background: rgba(107, 114, 128, 0.1);
+  border-radius: 4px;
+  border-left: 3px solid #6B7280;
+}
+
+.voucher-debug small {
+  color: #6B7280;
+  font-size: 0.75rem;
+  font-family: monospace;
+}
+
+/* Copy button positioning */
+.voucher-code {
+  position: relative;
+}
+
+.copy-btn {
+  position: absolute;
+  top: 24px; /* Adjust based on code-value position */
+  right: 8px;
+  background: rgba(139, 69, 19, 0.8);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0.8;
+  transition: all 0.2s ease;
+}
+
+.copy-btn:hover {
+  opacity: 1;
+  background: #8B4513;
+  transform: scale(1.1);
+}
+
+/* Manual Claim Voucher Styles */
+.manual-claim-section {
+  margin: 16px 0;
+  text-align: center;
+}
+
+.claim-voucher-btn {
+  background: linear-gradient(135deg, #10B981, #059669);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 12px 24px;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.claim-voucher-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #059669, #047857);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+}
+
+.claim-voucher-btn:disabled {
+  background: linear-gradient(135deg, #9CA3AF, #6B7280);
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: 0 2px 4px rgba(156, 163, 175, 0.2);
+}
+
+.claiming-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.claim-note {
+  margin: 8px 0 0 0;
+  font-size: 0.875rem;
+  color: #047857;
+  font-style: italic;
+}
+
+.auto-reward-info {
+  background: rgba(16, 185, 129, 0.1);
+  border-radius: 8px;
+  padding: 12px;
+  margin: 12px 0;
+  color: #047857;
+  font-weight: 500;
+}
+
 /* Loading */
 .loyalty-loading-container {
   min-height: 60vh;
@@ -522,6 +660,191 @@
 .step-content p {
   color: #666;
   line-height: 1.6;
+}
+
+/* Voucher Exchange Card Styles */
+.voucher-exchange-card {
+  background: linear-gradient(135deg, #FFF9F5 0%, #FFF5E6 100%);
+  border: 2px solid #8B4513;
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 8px 25px rgba(139, 69, 19, 0.15);
+  position: relative;
+  overflow: hidden;
+}
+
+.voucher-exchange-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(45deg, rgba(139, 69, 19, 0.05) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+.exchange-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  position: relative;
+  z-index: 1;
+}
+
+.exchange-icon {
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, #8B4513, #6F4E37);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  box-shadow: 0 4px 12px rgba(139, 69, 19, 0.3);
+}
+
+.exchange-card-header h3 {
+  color: #8B4513;
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.exchange-card-body {
+  margin-bottom: 20px;
+  position: relative;
+  z-index: 1;
+}
+
+.exchange-card-body p {
+  color: #6F4E37;
+  font-size: 1rem;
+  line-height: 1.5;
+  margin: 0 0 12px 0;
+  font-weight: 500;
+}
+
+.exchange-info {
+  background: white;
+  border: 1px solid #8B4513;
+  border-radius: 8px;
+  padding: 12px 16px;
+  text-align: center;
+  font-weight: 600;
+  color: #8B4513;
+  box-shadow: 0 2px 8px rgba(139, 69, 19, 0.1);
+}
+
+.exchange-card-actions {
+  display: flex;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+}
+
+.exchange-btn {
+  background: linear-gradient(135deg, #8B4513, #6F4E37);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 14px 28px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px rgba(139, 69, 19, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 180px;
+  justify-content: center;
+}
+
+.exchange-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(139, 69, 19, 0.4);
+  background: linear-gradient(135deg, #6F4E37, #5D2A0A);
+}
+
+.exchange-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.exchange-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Enhanced Empty State */
+.vouchers-empty .empty-icon {
+  margin-bottom: 20px;
+}
+
+.vouchers-empty h3 {
+  color: #8B4513;
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.vouchers-empty p {
+  color: #6F4E37;
+  font-size: 1rem;
+  line-height: 1.5;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+/* Mobile Responsive for Exchange Card */
+@media (max-width: 768px) {
+  .voucher-exchange-card {
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  
+  .exchange-card-header {
+    gap: 10px;
+  }
+  
+  .exchange-icon {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .exchange-card-header h3 {
+    font-size: 1.1rem;
+  }
+  
+  .exchange-btn {
+    padding: 12px 24px;
+    font-size: 0.9rem;
+    min-width: 160px;
+  }
+}
+
+@media (max-width: 480px) {
+  .voucher-exchange-card {
+    padding: 16px;
+  }
+  
+  .exchange-card-header {
+    flex-direction: column;
+    text-align: center;
+    gap: 8px;
+  }
+  
+  .exchange-icon {
+    margin: 0 auto;
+  }
+  
+  .exchange-btn {
+    width: 100%;
+    min-width: auto;
+  }
 }
 
 /* Responsive */

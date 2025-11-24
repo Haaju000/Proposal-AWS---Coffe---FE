@@ -571,7 +571,7 @@ body {
 }
 
 .shipper-detail-value.amount {
-  color: var(--success-green);
+  color: red;
   font-weight: 700;
 }
 

@@ -5,6 +5,7 @@ import shipperAPI from '../services/shipperAPI'; // Sử dụng file service m�
 import '../css/ShipperDashboard.css';
 import '../css/ShipperProfile.css'; // Import CSS mới cho Profile
 import '../css/ShipperNotifications.css'; // Import CSS cho notification system
+import '../css/OrderDetailModal.css'; // Import CSS cho Order Detail Modal
 
 const ShipperDashboard = () => {
   const { user } = useAuth();
@@ -25,6 +26,12 @@ const ShipperDashboard = () => {
   const [orderHistory, setOrderHistory] = useState([]);
   const [profile, setProfile] = useState({});
   const [deliveryHistory, setDeliveryHistory] = useState([]);
+  
+  // Order detail modal state
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [showOrderDetail, setShowOrderDetail] = useState(false);
+  const [orderDetailLoading, setOrderDetailLoading] = useState(false);
+  
   const [editingProfile, setEditingProfile] = useState(false);
   const [profileForm, setProfileForm] = useState({
     fullName: '',
@@ -319,6 +326,44 @@ const ShipperDashboard = () => {
       console.error('Error calculating fee:', error);
       showNotification('Lỗi', 'Lỗi khi tính phí ship: ' + error.message, 'error');
     }
+  };
+
+  // Handle view order detail
+  const handleViewOrderDetail = async (order) => {
+    try {
+      setOrderDetailLoading(true);
+      setSelectedOrder(null);
+      setShowOrderDetail(true);
+      
+      console.log('🔍 Fetching detailed order info for:', order.orderId);
+      console.log('📋 Basic order data:', order);
+      
+      // Get detailed order info from API
+      const detailedOrder = await shipperAPI.getOrderDetail(order.orderId);
+      console.log('✅ Detailed order data:', detailedOrder);
+      console.log('💰 Pricing fields check:', {
+        totalAmount: detailedOrder.totalAmount,
+        totalPrice: detailedOrder.totalPrice,
+        finalPrice: detailedOrder.finalPrice,
+        discountAmount: detailedOrder.discountAmount,
+        voucherDiscount: detailedOrder.voucherDiscount,
+        subtotal: detailedOrder.subtotal
+      });
+      
+      setSelectedOrder(detailedOrder);
+    } catch (error) {
+      console.error('❌ Error fetching order detail:', error);
+      showNotification('Lỗi', 'Không thể tải thông tin chi tiết đơn hàng: ' + error.message, 'error');
+      setShowOrderDetail(false);
+    } finally {
+      setOrderDetailLoading(false);
+    }
+  };
+
+  // Close order detail modal
+  const handleCloseOrderDetail = () => {
+    setShowOrderDetail(false);
+    setSelectedOrder(null);
   };
 
   // Load data when section changes
@@ -650,7 +695,7 @@ const ShipperDashboard = () => {
               <div className="shipper-order-details">
                 <div className="shipper-detail-item">
                   <span className="shipper-detail-label">Tổng tiền:</span>
-                  <span className="shipper-detail-value amount">{formatCurrency(order.totalAmount)}₫</span>
+                  <span className="shipper-detail-value amount">{formatCurrency(order.totalPrice)}₫</span>
                 </div>
                 <div className="shipper-detail-item">
                   <span className="shipper-detail-label">Ghi chú:</span>
@@ -663,6 +708,13 @@ const ShipperDashboard = () => {
               </div>
               
               <div className="shipper-order-actions">
+                <button 
+                  className="shipper-btn-info"
+                  onClick={() => handleViewOrderDetail(order)}
+                  disabled={loading}
+                >
+                  📋 Xem chi tiết
+                </button>
                 <button 
                   className="shipper-btn-ghost"
                   onClick={() => handleCalculateFee(order.orderId)}
@@ -1434,6 +1486,207 @@ const ShipperDashboard = () => {
             </div>
           </div>
         ))}
+      </div>
+
+      {/* Order Detail Modal */}
+      {showOrderDetail && (
+        <OrderDetailModal 
+          order={selectedOrder}
+          loading={orderDetailLoading}
+          onClose={handleCloseOrderDetail}
+          onAcceptOrder={handleAcceptOrder}
+          onCalculateFee={handleCalculateFee}
+          formatCurrency={formatCurrency}
+          formatDate={formatDate}
+        />
+      )}
+    </div>
+  );
+};
+
+// OrderDetailModal Component
+const OrderDetailModal = ({ order, loading, onClose, onAcceptOrder, onCalculateFee, formatCurrency, formatDate }) => {
+  if (!order && !loading) return null;
+
+  return (
+    <div className="order-detail-overlay" onClick={onClose}>
+      <div className="order-detail-modal" onClick={(e) => e.stopPropagation()}>
+        {/* Modal Header */}
+        <div className="order-detail-header">
+          <h2>📋 Chi tiết đơn hàng</h2>
+          <button className="order-detail-close-btn" onClick={onClose}>✕</button>
+        </div>
+
+        {/* Modal Content */}
+        <div className="order-detail-content">
+          {loading ? (
+            <div className="modal-loading">
+              <div className="loading-spinner"></div>
+              <p>Đang tải thông tin chi tiết...</p>
+            </div>
+          ) : order ? (
+            <>
+              {/* Order Info */}
+              <div className="order-info-section">
+                <div className="order-header-info">
+                  <div className="order-id">
+                    <span className="label">Mã đơn hàng:</span>
+                    <span className="value">#{order.orderId?.slice(0,8).toUpperCase()}</span>
+                  </div>
+                  <div className="order-status">
+                    <span className={`status-badge ${shipperAPI.getOrderStatusClass(order.status)}`}>
+                      {shipperAPI.getOrderStatusText(order.status)}
+                    </span>
+                  </div>
+                </div>
+                <div className="order-time">
+                  <span className="label">Thời gian đặt:</span>
+                  <span className="value">{formatDate(order.createdAt)}</span>
+                </div>
+              </div>
+
+              {/* Customer Info */}
+              <div className="customer-info-section">
+                <h3>👤 Thông tin khách hàng</h3>
+                <div className="info-grid">
+                  <div className="info-item">
+                    <span className="label">Tên khách hàng:</span>
+                    <span className="value">{order.customerName || 'Không có tên'}</span>
+                  </div>
+                  <div className="info-item">
+                    <span className="label">Số điện thoại:</span>
+                    <span className="value phone">{order.deliveryPhone || 'Không có SĐT'}</span>
+                  </div>
+                  <div className="info-item full-width">
+                    <span className="label">Địa chỉ giao hàng:</span>
+                    <span className="value address">{order.deliveryAddress || 'Không có địa chỉ'}</span>
+                  </div>
+                  {order.deliveryNote && (
+                    <div className="info-item full-width">
+                      <span className="label">Ghi chú:</span>
+                      <span className="value note">{order.deliveryNote}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Order Items */}
+              <div className="order-items-section">
+                <h3>🛒 Sản phẩm đặt hàng</h3>
+                <div className="items-list">
+                  {order.items && order.items.length > 0 ? (
+                    order.items.map((item, index) => (
+                      <div key={index} className="order-item">
+                        <div className="item-main">
+                          <div className="item-name">{item.productName || item.name}</div>
+                          <div className="item-type">
+                            <span className={`type-badge ${item.productType || 'default'}`}>
+                              {item.productType === 'cake' ? '🎂 Bánh' : 
+                               item.productType === 'drink' ? '☕ Đồ uống' : 
+                               '📦 Sản phẩm'}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="item-details">
+                          <div className="item-quantity">
+                            Số lượng: <strong>{item.quantity}</strong>
+                          </div>
+                          <div className="item-price">
+                            Đơn giá: <strong>₫{formatCurrency(item.unitPrice)}</strong>
+                          </div>
+                          <div className="item-total">
+                            Thành tiền: <strong>₫{formatCurrency(item.totalPrice)}</strong>
+                          </div>
+                        </div>
+                        {item.toppings && item.toppings.length > 0 && (
+                          <div className="item-toppings">
+                            <span className="toppings-label">Toppings:</span>
+                            {item.toppings.map((topping, idx) => (
+                              <span key={idx} className="topping-item">
+                                {topping.name} (+₫{formatCurrency(topping.price)})
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="no-items">Không có sản phẩm nào</div>
+                  )}
+                </div>
+              </div>
+
+              {/* Pricing Summary */}
+              <div className="pricing-section">
+                <h3>💰 Tổng kết đơn hàng</h3>
+                <div className="pricing-breakdown">
+                  <div className="price-line">
+                    <span>Tổng tiền hàng:</span>
+                    <span>₫{formatCurrency(order.totalAmount || order.totalPrice)}</span>
+                  </div>
+                  {order.discountAmount > 0 && (
+                    <div className="price-line discount">
+                      <span>Giảm giá:</span>
+                      <span>-₫{formatCurrency(order.discountAmount)}</span>
+                    </div>
+                  )}
+                  {order.appliedVoucherCode && (
+                    <div className="price-line voucher">
+                      <span>Voucher ({order.appliedVoucherCode}):</span>
+                      <span>-₫{formatCurrency(order.voucherDiscount || 0)}</span>
+                    </div>
+                  )}
+                  <div className="price-line final">
+                    <span><strong>Tổng thanh toán:</strong></span>
+                    <span><strong>₫{formatCurrency(order.finalPrice || order.totalAmount)}</strong></span>
+                  </div>
+                  <div className="payment-method">
+                    <span>Phương thức thanh toán:</span>
+                    <span className="payment-badge">
+                      {order.paymentMethod === 'COD' ? '💵 Thu tiền khi giao' : 
+                       order.paymentMethod === 'VNPAY' ? '💳 VNPay' : 
+                       order.paymentMethod === 'MOMO' ? '📱 MoMo' : 
+                       '💵 COD'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="modal-error">
+              <p>⚠️ Không thể tải thông tin đơn hàng</p>
+            </div>
+          )}
+        </div>
+
+        {/* Modal Actions */}
+        {!loading && order && (
+          <div className="order-detail-actions">
+            <button 
+              className="btn btn-secondary"
+              onClick={onClose}
+            >
+              Đóng
+            </button>
+            <button 
+              className="btn btn-info"
+              onClick={() => {
+                onCalculateFee(order.orderId);
+              }}
+            >
+              💰 Tính phí ship
+            </button>
+            <button 
+              className="btn btn-primary"
+              onClick={() => {
+                onAcceptOrder(order.orderId);
+                onClose();
+              }}
+            >
+              ✅ Nhận đơn hàng
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

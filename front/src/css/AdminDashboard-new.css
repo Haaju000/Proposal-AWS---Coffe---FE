@@ -728,7 +728,7 @@ body {
 
 .low-stock {
   color: var(--white) !important;
-  background: linear-gradient(135deg, var(--error), #DC2626) !important;
+  
   padding: var(--spacing-xs) var(--spacing-md) !important;
   border-radius: var(--radius-lg) !important;
   font-weight: 700 !important;

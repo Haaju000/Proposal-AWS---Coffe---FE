@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import Header from '../components/Header';
 import CheckoutModal from '../components/CheckoutModal';
 import ToppingModal from '../components/ToppingModal';
@@ -13,6 +14,7 @@ import { useCart } from '../contexts/CartContext';
 import '../css/Menu.css';
 
 const Menu = () => {
+  const location = useLocation();
   const [activeFilter, setActiveFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('name'); // 'name', 'price-low', 'price-high', 'popular'
@@ -25,6 +27,7 @@ const Menu = () => {
   const [toppingModalOpen, setToppingModalOpen] = useState(false);
   const [selectedDrinkForTopping, setSelectedDrinkForTopping] = useState(null);
   const [selectedToppings, setSelectedToppings] = useState([]);
+  const [loyaltyMessage, setLoyaltyMessage] = useState(null);
   
   const { user, isAuthenticated } = useAuth();
   const { 
@@ -55,10 +58,9 @@ const Menu = () => {
         setDrinks(drinksResponse);
         setCakes(cakesResponse);
         setToppings(toppingsResponse);
-        setError(null);
-      } catch (err) {
-        console.error('Error fetching menu data:', err);
-        setError('Không thể tải dữ liệu thực đơn. Vui lòng thử lại sau.');
+      } catch (error) {
+        console.error('Error fetching menu data:', error);
+        setError('Không thể tải dữ liệu menu');
       } finally {
         setLoading(false);
       }
@@ -66,6 +68,20 @@ const Menu = () => {
 
     fetchMenuData();
   }, []);
+
+  // 🎫 Check for voucher message from Loyalty page navigation
+  useEffect(() => {
+    if (location.state?.fromLoyalty && location.state?.message) {
+      setLoyaltyMessage(location.state.message);
+      
+      // Auto-hide message after 8 seconds
+      const timer = setTimeout(() => {
+        setLoyaltyMessage(null);
+      }, 8000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [location.state]);
 
   // Helper function for quantity selector
   const [itemQuantities, setItemQuantities] = useState({});
@@ -456,9 +472,25 @@ const Menu = () => {
     <div className="menu-page">
       <Header />
       
+      {/* 🎫 Loyalty Voucher Notification Banner */}
+      {loyaltyMessage && (
+        <div className="loyalty-notification-banner">
+          <div className="banner-content">
+            <span className="banner-icon">🎫</span>
+            <span className="banner-message">{loyaltyMessage}</span>
+            <button 
+              className="banner-close"
+              onClick={() => setLoyaltyMessage(null)}
+              aria-label="Đóng thông báo"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+      
       <main className="menu-main">
-        <div className="menu-container">
-          {/* Sidebar */}
+        <div className="menu-container">{/* Sidebar */}
           <aside className="menu-sidebar">
             <div className="sidebar-header">
               <h2 className="sidebar-title">Thực đơn</h2>
