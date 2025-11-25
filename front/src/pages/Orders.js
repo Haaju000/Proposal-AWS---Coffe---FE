@@ -1,47 +1,70 @@
 import React, { useState, useEffect } from 'react';
 import PaymentButton from '../components/PaymentButton';
 import orderService from '../services/orderService';
+import drinkService from '../services/drinkService';
+import cakeService from '../services/cakeService';
 import '../css/Orders.css';
 
 const Orders = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [statistics, setStatistics] = useState(null);
+  const [activeFilter, setActiveFilter] = useState('all');
+  const [error, setError] = useState(null);
+  const [drinks, setDrinks] = useState([]);
+  const [cakes, setCakes] = useState([]);
 
   useEffect(() => {
     loadOrders();
+    loadProductData();
   }, []);
+
+  const loadProductData = async () => {
+    try {
+      const [drinksData, cakesData] = await Promise.all([
+        drinkService.getAllDrinks(),
+        cakeService.getAllCakes()
+      ]);
+      setDrinks(drinksData || []);
+      setCakes(cakesData || []);
+      console.log('✅ Product data loaded for images:', { drinks: drinksData?.length, cakes: cakesData?.length });
+    } catch (error) {
+      console.error('❌ Error loading product data:', error);
+      // Không set error vì đây không critical
+    }
+  };
 
   const loadOrders = async () => {
     try {
       setLoading(true);
-      const userOrders = await orderService.getUserOrders();
-      console.log('Loaded orders from API:', userOrders);
-      console.log('Orders structure:', userOrders?.map(o => ({
-        orderId: o?.orderId,
-        status: o?.status,
-        finalPrice: o?.finalPrice,
-        items: o?.items?.length || 0
-      })));
-      setOrders(userOrders || []);
+      setError(null);
+      
+      // ✅ Sử dụng endpoint my-orders mới
+      const response = await orderService.getMyOrderHistory();
+      console.log('Loaded order history from API:', response);
+      
+      if (response && response.orders) {
+        setOrders(response.orders);
+        setStatistics(response.statistics);
+        console.log('Order statistics:', response.statistics);
+      } else {
+        setOrders([]);
+        setStatistics(null);
+      }
+      
     } catch (error) {
       console.error('Load orders error:', error);
+      setError(error.message || 'Không thể tải lịch sử đơn hàng');
       
       // Handle specific errors
       if (error.message.includes('403') || error.message.includes('Forbidden')) {
-        // User role doesn't have permission to access GET /Order (Admin only)
-        console.log('User does not have admin permissions to view all orders');
-        setOrders([]);
-        // Could show a message here that user orders are not available
+        setError('Bạn không có quyền truy cập thông tin đơn hàng');
       } else if (error.message.includes('401') || error.message.includes('Unauthorized')) {
-        // Token expired or invalid
-        console.log('User not authorized - token may be expired');
-        setOrders([]);
-        // Could redirect to login here
-      } else {
-        // Other errors (network, server, etc.)
-        console.log('API error, no orders available');
-        setOrders([]);
+        setError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
       }
+      
+      setOrders([]);
+      setStatistics(null);
     } finally {
       setLoading(false);
     }
@@ -56,30 +79,181 @@ const Orders = () => {
     alert(`Lỗi thanh toán: ${error}`);
   };
 
+  // 🖼️ Helper function to get product image
+  const getProductImage = (productId, productType) => {
+    try {
+      if (productType === 'Drink') {
+        const drink = drinks.find(d => d.id === productId);
+        return drink?.imageUrl || '☕';
+      } else if (productType === 'Cake') {
+        const cake = cakes.find(c => c.id === productId);
+        return cake?.imageUrl || '🧁';
+      }
+      return '🍽️';
+    } catch (error) {
+      console.error('Error getting product image:', error);
+      return productType === 'Drink' ? '☕' : '🧁';
+    }
+  };
+
+  // 🖼️ Helper function to render product image
+  const renderProductImage = (imageUrl, productName) => {
+    if (imageUrl && imageUrl.startsWith('http')) {
+      return <img src={imageUrl} alt={productName} className="product-image" />;
+    } else {
+      return <span className="product-emoji">{imageUrl}</span>;
+    }
+  };
+
+  // 📏 Filter orders by status
+  const getFilteredOrders = () => {
+    if (activeFilter === 'all') return orders;
+    return orders.filter(order => {
+      switch (activeFilter) {
+        case 'pending': return order.status === 'Pending';
+        case 'processing': return ['Processing', 'Confirmed', 'Shipping'].includes(order.status);
+        case 'completed': return ['Delivered', 'Completed'].includes(order.status);
+        case 'cancelled': return order.status === 'Cancelled';
+        default: return true;
+      }
+    });
+  };
+
+  // 🔄 Handle reorder action
+  const handleReorder = (order) => {
+    // Navigate to menu with reorder info
+    window.location.href = `/menu?reorder=${order.orderId}`;
+  };
+
+  // ❌ Handle cancel order action
+  const handleCancelOrder = async (orderId) => {
+    if (!window.confirm('Bạn có chắc chắn muốn hủy đơn hàng này?')) return;
+    
+    try {
+      // Call cancel API (need to implement in orderService)
+      // await orderService.cancelOrder(orderId);
+      alert('Tính năng hủy đơn hàng đang được phát triển');
+      // loadOrders(); // Reload after cancel
+    } catch (error) {
+      console.error('Cancel order error:', error);
+      alert(`Lỗi hủy đơn hàng: ${error.message}`);
+    }
+  };
+
   if (loading) {
     return (
       <div className="orders-container">
         <div className="loading-container">
           <div className="coffee-loader">
             <div className="coffee-cup">☕</div>
-            <p>Đang tải đơn hàng của bạn...</p>
+            <p>Đang tải lịch sử đơn hàng...</p>
           </div>
         </div>
       </div>
     );
   }
 
+  if (error) {
+    return (
+      <div className="orders-container">
+        <div className="error-container">
+          <div className="error-icon">❌</div>
+          <h3>Lỗi tải dữ liệu</h3>
+          <p>{error}</p>
+          <button className="btn-retry" onClick={loadOrders}>
+            Thử lại
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const filteredOrders = getFilteredOrders();
+
   return (
     <div className="orders-container">
       <div className="orders-header">
         <h1 className="orders-title">
           <span className="coffee-icon">☕</span>
-          Đơn hàng của tôi
+          Lịch sử đơn hàng
         </h1>
         <p className="orders-subtitle">Theo dõi hành trình cà phê của bạn</p>
       </div>
+
+      {/* 📊 Statistics Dashboard */}
+      {statistics && (
+        <div className="order-stats">
+          <div className="stats-grid">
+            <div className="stat-card total">
+              <div className="stat-icon">📋</div>
+              <div className="stat-info">
+                <div className="stat-number">{statistics.pendingOrders + statistics.processingOrders + statistics.confirmedOrders + statistics.shippingOrders + statistics.deliveredOrders + statistics.completedOrders + statistics.cancelledOrders}</div>
+                <div className="stat-label">Tổng đơn hàng</div>
+              </div>
+            </div>
+            
+            <div className="stat-card completed">
+              <div className="stat-icon">✅</div>
+              <div className="stat-info">
+                <div className="stat-number">{statistics.completedOrders}</div>
+                <div className="stat-label">Hoàn thành</div>
+              </div>
+            </div>
+            
+            <div className="stat-card processing">
+              <div className="stat-icon">⏳</div>
+              <div className="stat-info">
+                <div className="stat-number">{statistics.processingOrders + statistics.confirmedOrders + statistics.shippingOrders}</div>
+                <div className="stat-label">Đang xử lý</div>
+              </div>
+            </div>
+            
+            <div className="stat-card spent">
+              <div className="stat-icon">💰</div>
+              <div className="stat-info">
+                <div className="stat-number">{statistics.totalSpent?.toLocaleString('vi-VN') || '0'}₫</div>
+                <div className="stat-label">Tổng chi tiêu</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🗂 Status Filters */}
+      <div className="order-filters">
+        <button 
+          className={`filter-btn ${activeFilter === 'all' ? 'active' : ''}`}
+          onClick={() => setActiveFilter('all')}
+        >
+          Tất cả ({orders.length})
+        </button>
+        <button 
+          className={`filter-btn ${activeFilter === 'pending' ? 'active' : ''}`}
+          onClick={() => setActiveFilter('pending')}
+        >
+          Chờ thanh toán ({statistics?.pendingOrders || 0})
+        </button>
+        <button 
+          className={`filter-btn ${activeFilter === 'processing' ? 'active' : ''}`}
+          onClick={() => setActiveFilter('processing')}
+        >
+          Đang xử lý ({(statistics?.processingOrders || 0) + (statistics?.confirmedOrders || 0) + (statistics?.shippingOrders || 0)})
+        </button>
+        <button 
+          className={`filter-btn ${activeFilter === 'completed' ? 'active' : ''}`}
+          onClick={() => setActiveFilter('completed')}
+        >
+          Hoàn thành ({(statistics?.deliveredOrders || 0) + (statistics?.completedOrders || 0)})
+        </button>
+        <button 
+          className={`filter-btn ${activeFilter === 'cancelled' ? 'active' : ''}`}
+          onClick={() => setActiveFilter('cancelled')}
+        >
+          Đã hủy ({statistics?.cancelledOrders || 0})
+        </button>
+      </div>
       
-      {orders.length === 0 ? (
+      {filteredOrders.length === 0 ? (
         <div className="empty-orders">
           <div className="empty-icon">📋</div>
           <h3>Chưa có đơn hàng nào</h3>
@@ -110,17 +284,24 @@ const Orders = () => {
                 </div>
                 <div className={`status-badge status-${order.status?.toLowerCase() || 'unknown'}`}>
                   <span className="status-dot"></span>
-                  {getStatusText(order.status)}
+                  {order.statusDisplay || getStatusText(order.status)}
                 </div>
               </div>
 
               {/* Order Details */}
               <div className="order-details">
-                {/* User ID */}
-                {order.userId && (
+                {/* Delivery Info */}
+                {order.deliveryAddress && (
                   <div className="detail-row">
-                    <span className="detail-label">👤 Khách hàng:</span>
-                    <span className="detail-value">{order.userId.slice(-8).toUpperCase()}</span>
+                    <span className="detail-label">📍 Địa chỉ:</span>
+                    <span className="detail-value">{order.deliveryAddress}</span>
+                  </div>
+                )}
+                
+                {order.deliveryPhone && (
+                  <div className="detail-row">
+                    <span className="detail-label">📞 Liên hệ:</span>
+                    <span className="detail-value">{order.deliveryPhone}</span>
                   </div>
                 )}
 
@@ -137,8 +318,15 @@ const Orders = () => {
                   
                   {order.appliedVoucherCode && (
                     <div className="detail-row voucher-row">
-                      <span className="detail-label">🎫 Mã giảm giá:</span>
+                      <span className="detail-label">🎫 Phiếu giảm giá:</span>
                       <span className="detail-value voucher-code">{order.appliedVoucherCode}</span>
+                    </div>
+                  )}
+                  
+                  {order.discountAmount > 0 && (
+                    <div className="detail-row discount-row">
+                      <span className="detail-label">🔥 Tiềt kiệm:</span>
+                      <span className="detail-value discount-amount">-{order.discountAmount.toLocaleString('vi-VN')} VNĐ</span>
                     </div>
                   )}
                   
@@ -150,7 +338,7 @@ const Orders = () => {
                   </div>
                 </div>
 
-                {/* Completion Time */}
+                {/* Timeline Information */}
                 {order.completedAt && (
                   <div className="detail-row">
                     <span className="detail-label">✅ Hoàn thành:</span>
@@ -169,39 +357,59 @@ const Orders = () => {
 
               {/* Items List */}
               <div className="items-section">
-                <h4 className="items-title">🛍️ Chi tiết đơn hàng</h4>
+                <h4 className="items-title">🛍️ Chi tiết đơn hàng ({order.itemCount} món)</h4>
                 <div className="items-list">
                   {order.items && Array.isArray(order.items) && order.items.length > 0 ? 
-                    order.items.map((item, index) => (
-                      <div key={index} className="item-card">
-                        <div className="item-info">
-                          <div className="item-header">
-                            <span className="item-name">
-                              {item.productName || item.name || 'Sản phẩm'}
-                            </span>
-                            <span className="item-quantity">x{item.quantity || 1}</span>
+                    order.items.map((item, index) => {
+                      const productImage = getProductImage(item.productId, item.productType);
+                      
+                      return (
+                        <div key={index} className="item-card-new">
+                          {/* Product Image */}
+                          <div className="item-image-container">
+                            {renderProductImage(productImage, item.productName)}
                           </div>
                           
-                          {item.unitPrice && (
-                            <div className="item-price">
-                              {item.unitPrice.toLocaleString('vi-VN')} VNĐ/món
-                            </div>
-                          )}
-                          
-                          {item.toppings && Array.isArray(item.toppings) && item.toppings.length > 0 && (
-                            <div className="item-toppings">
-                              <span className="toppings-label">Topping:</span>
-                              {item.toppings.map((topping, tIndex) => (
-                                <span key={tIndex} className="topping-tag">
-                                  {topping.name || topping.toppingName || 'Topping'}
-                                  {topping.price && ` (+${topping.price.toLocaleString('vi-VN')}₫)`}
+                          {/* Product Info */}
+                          <div className="item-info-container">
+                            <div className="item-main-info">
+                              <div className="item-name-row">
+                                <span className="item-name-new">
+                                  {item.productName || item.name || 'Sản phẩm'}
                                 </span>
-                              ))}
+                                <span className="item-quantity-badge">x{item.quantity || 1}</span>
+                              </div>
+                              
+                              <div className="item-price-row">
+                                <span className="item-unit-price">
+                                  {item.unitPrice?.toLocaleString('vi-VN') || '0'}₫/món
+                                </span>
+                                <span className="item-total-price">
+                                  = {item.totalPrice?.toLocaleString('vi-VN') || '0'}₫
+                                </span>
+                              </div>
                             </div>
-                          )}
+                            
+                            {/* Toppings */}
+                            {item.toppings && Array.isArray(item.toppings) && item.toppings.length > 0 && (
+                              <div className="item-toppings-new">
+                                <span className="toppings-label">🍦 Topping:</span>
+                                <div className="toppings-grid">
+                                  {item.toppings.map((topping, tIndex) => (
+                                    <div key={tIndex} className="topping-chip">
+                                      <span className="topping-name">{topping.name || topping.toppingName || 'Topping'}</span>
+                                      {topping.price && (
+                                        <span className="topping-price">+{topping.price.toLocaleString('vi-VN')}₫</span>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    )) : (
+                      );
+                    }) : (
                       <div className="no-items">
                         <p>Không có thông tin chi tiết sản phẩm</p>
                       </div>
@@ -222,6 +430,36 @@ const Orders = () => {
                   />
                 </div>
               )}
+
+              {/* 🎨 Action Buttons */}
+              <div className="action-buttons">
+                {order.canCancel && (
+                  <button 
+                    className="btn-action cancel" 
+                    onClick={() => handleCancelOrder(order.orderId)}
+                  >
+                    ❌ Hủy đơn
+                  </button>
+                )}
+                
+                {order.canReorder && (
+                  <button 
+                    className="btn-action reorder" 
+                    onClick={() => handleReorder(order)}
+                  >
+                    🔄 Đặt lại
+                  </button>
+                )}
+                
+                {order.canRate && (
+                  <button 
+                    className="btn-action rate" 
+                    onClick={() => alert('Tính năng đánh giá đang phát triển!')}
+                  >
+                    ⭐ Đánh giá
+                  </button>
+                )}
+              </div>
             </div>
           ))}
         </div>

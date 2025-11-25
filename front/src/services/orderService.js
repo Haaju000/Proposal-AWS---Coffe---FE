@@ -239,6 +239,46 @@ const orderService = {
     }, 0);
   },
 
+  // 📋 Get my order history using new endpoint
+  getMyOrderHistory: async () => {
+    try {
+      console.log('📋 Getting my order history from API...');
+      const response = await apiClient.get('/Order/my-orders');
+      console.log('✅ Order history retrieved successfully:', response.data);
+      return response.data; // Contains { orders, statistics, totalOrders }
+    } catch (error) {
+      console.error('❌ Get order history error:', error);
+      if (error.response?.data?.error) {
+        throw new Error(error.response.data.error);
+      } else if (error.response?.status === 401) {
+        throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+      } else if (error.response?.status === 403) {
+        throw new Error('Bạn không có quyền truy cập thông tin này.');
+      }
+      throw new Error('Không thể tải lịch sử đơn hàng. Vui lòng thử lại.');
+    }
+  },
+
+  // 📄 Get my order detail by ID using new endpoint
+  getMyOrderDetail: async (orderId) => {
+    try {
+      console.log('📄 Getting my order detail for orderId:', orderId);
+      const response = await apiClient.get(`/Order/my-orders/${orderId}`);
+      console.log('✅ Order detail retrieved successfully:', response.data);
+      return response.data; // Contains detailed order info with actions
+    } catch (error) {
+      console.error('❌ Get order detail error:', error);
+      if (error.response?.data?.error) {
+        throw new Error(error.response.data.error);
+      } else if (error.response?.status === 404) {
+        throw new Error('Không tìm thấy đơn hàng này.');
+      } else if (error.response?.status === 403) {
+        throw new Error('Bạn không có quyền xem đơn hàng này.');
+      }
+      throw new Error('Không thể tải chi tiết đơn hàng. Vui lòng thử lại.');
+    }
+  },
+
   // Helper function để format trạng thái
   getStatusText: (status) => {
     const statusMap = {

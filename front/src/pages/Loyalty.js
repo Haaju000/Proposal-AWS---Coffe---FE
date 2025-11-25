@@ -358,17 +358,7 @@ const Loyalty = () => {
                         <div className="voucher-code">
                           <span className="code-label">Mã voucher:</span>
                           <span className="code-value">{voucher.code}</span>
-                          {activeTab === 'available' && (
-                            <button 
-                              className="copy-btn"
-                              onClick={() => handleCopyCode(voucher.code)}
-                              title="Copy mã voucher"
-                            >
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                                <path d="M16 4H18C19.1 4 20 4.9 20 6V18C20 19.1 19.1 20 18 20H6C4.9 20 4 19.1 4 18V6C4 4.9 4.9 4 6 4H8M16 4V2M8 4V2M8 4H16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                              </svg>
-                            </button>
-                          )}
+                          
                         </div>
                         <div className="voucher-expiry">
                           {activeTab === 'expired' ? 'Đã hết hạn' : 'Hết hạn'}: {formatDate(voucher.expirationDate)}
