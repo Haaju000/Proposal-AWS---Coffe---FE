@@ -66,66 +66,84 @@ const NotificationDropdown = () => {
     ? notifications.filter(n => !n.isRead)
     : notifications;
 
-  const displayedNotifications = filteredNotifications.slice(0, 20); // Limit to 20 for performance
+  const displayedNotifications = filteredNotifications.slice(0, 8); // Giới hạn 8 thông báo cho gọn gàng
 
   return (
     <div className="notification-dropdown" ref={dropdownRef}>
-      {/* Bell Icon with Badge */}
+      {/* Modern Bell Icon with Badge */}
       <button 
         className={`notification-bell ${isOpen ? 'active' : ''} ${unreadCount > 0 ? 'has-notifications' : ''}`}
         onClick={toggleDropdown}
         title={`Thông báo (${unreadCount} chưa đọc)`}
       >
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-          <path 
-            d="M18 8C18 6.4087 17.3679 4.88258 16.2426 3.75736C15.1174 2.63214 13.5913 2 12 2C10.4087 2 8.88258 2.63214 7.75736 3.75736C6.63214 4.88258 6 6.4087 6 8C6 15 3 17 3 17H21C21 17 18 15 18 8Z" 
-            stroke="currentColor" 
-            strokeWidth="2" 
-            strokeLinecap="round" 
-            strokeLinejoin="round"
-          />
-          <path 
-            d="M13.73 21C13.5542 21.3031 13.3019 21.5547 12.9982 21.7295C12.6946 21.9044 12.3504 21.9965 12 21.9965C11.6496 21.9965 11.3054 21.9044 11.0018 21.7295C10.6982 21.5547 10.4458 21.3031 10.27 21" 
-            stroke="currentColor" 
-            strokeWidth="2" 
-            strokeLinecap="round" 
-            strokeLinejoin="round"
-          />
-        </svg>
-        
-        {/* Notification Badge */}
-        {unreadCount > 0 && (
-          <span className="notification-badge">
-            {unreadCount > 99 ? '99+' : unreadCount}
-          </span>
-        )}
-        
-        {/* Pulse animation for new notifications */}
-        {unreadCount > 0 && <div className="notification-pulse"></div>}
+        <div className="bell-icon-wrapper">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <path 
+              d="M12 2C13.1 2 14 2.9 14 4V5.1C16.3 6.2 18 8.5 18 11.1V16L20 18V19H4V18L6 16V11.1C6 8.5 7.7 6.2 10 5.1V4C10 2.9 10.9 2 12 2M21 7V8H19V7H21M23 11V12H19V11H23M21 15V16H19V15H21Z" 
+              fill="currentColor"
+            />
+            <path 
+              d="M10.5 21C10.5 21.8 11.2 22.5 12 22.5S13.5 21.8 13.5 21" 
+              stroke="currentColor" 
+              strokeWidth="1.5" 
+              strokeLinecap="round"
+            />
+          </svg>
+          
+          {/* Modern Badge */}
+          {unreadCount > 0 && (
+            <span className="notification-badge">
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </span>
+          )}
+          
+          {/* Subtle pulse for new notifications */}
+          {unreadCount > 0 && <div className="notification-pulse"></div>}
+        </div>
       </button>
 
-      {/* Dropdown Content */}
+      {/* Modern Dropdown Content */}
       {isOpen && (
         <div className="notification-dropdown-content">
-          {/* Header */}
+          {/* Sleek Header */}
           <div className="dropdown-header">
-            <div className="header-title">
-              <h3>Thông báo</h3>
-              <span className="notification-count">
-                {unreadCount > 0 && `${unreadCount} chưa đọc`}
-              </span>
+            <div className="header-left">
+              <h3 className="header-title">Thông báo</h3>
+              {unreadCount > 0 && (
+                <span className="unread-indicator">
+                  {unreadCount} mới
+                </span>
+              )}
             </div>
             
             <div className="header-actions">
+              {unreadCount > 0 && (
+                <button 
+                  className="action-btn mark-all-btn" 
+                  onClick={handleMarkAllAsRead}
+                  title="Đánh dấu tất cả đã đọc"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                    <path 
+                      d="M20 6L9 17L4 12" 
+                      stroke="currentColor" 
+                      strokeWidth="2" 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </button>
+              )}
+              
               <button 
-                className="header-btn refresh-btn" 
+                className="action-btn refresh-btn" 
                 onClick={handleRefresh}
                 disabled={loading}
                 title="Làm mới"
               >
                 <svg 
-                  width="16" 
-                  height="16" 
+                  width="14" 
+                  height="14" 
                   viewBox="0 0 24 24" 
                   fill="none"
                   className={loading ? 'spinning' : ''}
@@ -153,70 +171,38 @@ const NotificationDropdown = () => {
                   />
                 </svg>
               </button>
-              
-              <button 
-                className="header-btn close-btn" 
-                onClick={closeDropdown}
-                title="Đóng"
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <path 
-                    d="M18 6L6 18M6 6L18 18" 
-                    stroke="currentColor" 
-                    strokeWidth="2" 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </button>
             </div>
           </div>
 
-          {/* Tab Navigation */}
+          {/* Clean Tab Navigation */}
           <div className="notification-tabs">
             <button 
               className={`tab-btn ${activeTab === 'all' ? 'active' : ''}`}
               onClick={() => setActiveTab('all')}
             >
-              Tất cả ({notifications.length})
+              <span>Tất cả</span>
+              <span className="tab-count">{notifications.length}</span>
             </button>
             <button 
               className={`tab-btn ${activeTab === 'unread' ? 'active' : ''}`}
               onClick={() => setActiveTab('unread')}
             >
-              Chưa đọc ({unreadCount})
+              <span>Chưa đọc</span>
+              {unreadCount > 0 && <span className="tab-count unread">{unreadCount}</span>}
             </button>
           </div>
 
-          {/* Action Bar */}
-          {unreadCount > 0 && (
-            <div className="action-bar">
-              <button 
-                className="action-bar-btn mark-all-read"
-                onClick={handleMarkAllAsRead}
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                  <path 
-                    d="M20 6L9 17L4 12" 
-                    stroke="currentColor" 
-                    strokeWidth="2" 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round"
-                  />
-                </svg>
-                Đánh dấu tất cả đã đọc
-              </button>
-            </div>
-          )}
-
           {/* Error State */}
           {error && (
-            <div className="error-message">
-              <span className="error-icon">⚠️</span>
-              <span className="error-text">{error}</span>
-              <button className="error-retry" onClick={handleRefresh}>
-                Thử lại
-              </button>
+            <div className="error-state">
+              <div className="error-icon">🚨</div>
+              <div className="error-content">
+                <p className="error-title">Không thể tải thông báo</p>
+                <p className="error-message">{error}</p>
+                <button className="error-retry" onClick={handleRefresh}>
+                  Thử lại
+                </button>
+              </div>
             </div>
           )}
 
@@ -224,45 +210,63 @@ const NotificationDropdown = () => {
           {loading && (
             <div className="loading-state">
               <div className="loading-spinner"></div>
-              <span>Đang tải thông báo...</span>
+              <span className="loading-text">Đang tải...</span>
             </div>
           )}
 
-          {/* Notifications List */}
+          {/* Modern Notifications List */}
           <div className="notifications-list">
             {!loading && !error && displayedNotifications.length === 0 ? (
               <div className="empty-state">
-                <div className="empty-icon">🔔</div>
-                <div className="empty-text">
-                  {activeTab === 'unread' 
-                    ? 'Không có thông báo chưa đọc' 
-                    : 'Chưa có thông báo nào'
-                  }
+                <div className="empty-icon">
+                  {activeTab === 'unread' ? '🔔' : '📥'}
+                </div>
+                <div className="empty-content">
+                  <h4 className="empty-title">
+                    {activeTab === 'unread' 
+                      ? 'Bạn đã đọc hết rồi!' 
+                      : 'Chưa có thông báo'
+                    }
+                  </h4>
+                  <p className="empty-subtitle">
+                    {activeTab === 'unread' 
+                      ? 'Không có thông báo chưa đọc nào cả' 
+                      : 'Các thông báo sẽ hiển thị ở đây'
+                    }
+                  </p>
                 </div>
               </div>
             ) : (
-              displayedNotifications.map((notification) => (
-                <NotificationItem
-                  key={notification.notificationId}
-                  notification={notification}
-                  onClose={closeDropdown}
-                />
-              ))
+              <>
+                {displayedNotifications.map((notification) => (
+                  <NotificationItem
+                    key={notification.notificationId}
+                    notification={notification}
+                    onClose={closeDropdown}
+                  />
+                ))}
+                
+                {/* Show more indicator */}
+                {filteredNotifications.length > displayedNotifications.length && (
+                  <div className="show-more-indicator">
+                    <span>+{filteredNotifications.length - displayedNotifications.length} thông báo khác</span>
+                  </div>
+                )}
+              </>
             )}
           </div>
 
-          {/* Footer */}
-          {filteredNotifications.length > 20 && (
+          {/* Clean Footer */}
+          {!loading && !error && filteredNotifications.length > 0 && (
             <div className="dropdown-footer">
               <button 
                 className="view-all-btn"
                 onClick={() => {
                   closeDropdown();
-                  // Navigate to full notifications page
                   window.location.href = '/notifications';
                 }}
               >
-                Xem tất cả thông báo ({filteredNotifications.length})
+                Xem tất cả thông báo
               </button>
             </div>
           )}

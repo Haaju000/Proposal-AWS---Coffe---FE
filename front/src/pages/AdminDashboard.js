@@ -192,12 +192,7 @@ const AdminDashboard = () => {
       icon: <FiTruck size={20} />,
       description: 'Phê duyệt và quản lý shipper'
     },
-    {
-      id: 'promotions',
-      label: 'Khuyến mãi & Voucher',
-      icon: <FiTrendingUp size={20} />,
-      description: 'Khuyến mãi và tích điểm'
-    }
+    
   ];
 
   const renderContent = () => {
@@ -220,8 +215,7 @@ const AdminDashboard = () => {
         return <CustomersContent showNotification={showNotification} showConfirmModal={showConfirmModal} />;
       case 'shippers':
         return <ShippersContent showNotification={showNotification} showConfirmModal={showConfirmModal} />;
-      case 'promotions':
-        return <PromotionsContent />;
+      
       default:
         return (
           <OverviewContent 
@@ -687,7 +681,7 @@ const ProductsContent = ({ showNotification, showConfirmModal }) => {
       <div className="products-grid">
         {filteredProducts.map((product) => (
           <div key={`${product.type}-${product.id}`} className="product-card">
-            <div className="product-image">
+            <div className="admin-product-image">
               {product.imageUrl ? (
                 <img 
                   src={product.imageUrl} 
@@ -2294,41 +2288,5 @@ const ShippersContent = ({ showNotification, showConfirmModal }) => {
     </div>
   );
 };
-
-const PromotionsContent = () => (
-  <div className="promotions-content">
-    <div className="content-header">
-      <h2>Chương trình khuyến mãi</h2>
-      <button className="add-btn">
-        <span className="btn-icon">➕</span>
-        Tạo chương trình mới
-      </button>
-    </div>
-    <div className="promotions-grid">
-      <div className="promotion-card">
-        <div className="promotion-header">
-          <h3>Tích điểm thành viên</h3>
-          <span className="promotion-status active">Đang chạy</span>
-        </div>
-        <p>Tích 1 điểm cho mỗi 10,000₫</p>
-        <div className="promotion-actions">
-          <button className="edit-btn">✏️ Chỉnh sửa</button>
-          <button className="toggle-btn">⏸️ Tạm dừng</button>
-        </div>
-      </div>
-      <div className="promotion-card">
-        <div className="promotion-header">
-          <h3>Voucher giảm giá</h3>
-          <span className="promotion-status inactive">Chưa kích hoạt</span>
-        </div>
-        <p>Giảm 20% cho đơn hàng từ 200,000₫</p>
-        <div className="promotion-actions">
-          <button className="edit-btn">✏️ Chỉnh sửa</button>
-          <button className="toggle-btn">▶️ Kích hoạt</button>
-        </div>
-      </div>
-    </div>
-  </div>
-);
 
 export default AdminDashboard;
