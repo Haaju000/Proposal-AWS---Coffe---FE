@@ -8,6 +8,8 @@ import orderService from '../services/orderService';
 import customerService from '../services/customerService';
 import shipperService from '../services/shipperService';
 import imageService from '../services/imageService';
+import inventoryService from '../services/inventoryService';
+import dashboardService from '../services/dashboardService';
 import '../css/AdminDashboard-new.css';
 
 // React Icons
@@ -61,9 +63,49 @@ const AdminDashboard = () => {
     pendingShippers: []
   });
 
-  // Load shared data on component mount
+  // Load dashboard data with optimized API call
   useEffect(() => {
-    const loadSharedData = async () => {
+    const loadDashboardData = async () => {
+      try {
+        console.log('🚀 Loading dashboard with optimized API...');
+        
+        // 🎯 Single API call thay vì 6+ separate calls
+        const dashboardResponse = await dashboardService.getDashboardOverview();
+        
+        if (dashboardResponse.success) {
+          const formattedData = dashboardService.formatDashboardData(dashboardResponse.data);
+          console.log('✅ Dashboard data formatted:', formattedData);
+          
+          // Set formatted data to state
+          setSharedData({
+            dashboardData: formattedData,
+            rawData: dashboardResponse.data,
+            lastUpdated: dashboardResponse.timestamp,
+            // Fallback empty arrays for components that still expect them
+            products: [],
+            orders: [],
+            customers: [],
+            shippers: [],
+            pendingShippers: []
+          });
+          
+          showNotification('Dashboard loaded', 'Dữ liệu dashboard đã được tải thành công', 'success', 2000);
+        } else {
+          throw new Error('Dashboard API returned unsuccessful response');
+        }
+      } catch (error) {
+        console.error('❌ Failed to load dashboard data:', error);
+        
+        // Fallback: Load individual APIs if dashboard API fails
+        console.log('🔄 Falling back to individual API calls...');
+        await loadFallbackData();
+        
+        showNotification('Fallback mode', 'Dashboard đang chạy ở chế độ dự phòng', 'warning');
+      }
+    };
+
+    // Fallback function for individual API calls
+    const loadFallbackData = async () => {
       try {
         const [
           allShippers,
@@ -75,14 +117,12 @@ const AdminDashboard = () => {
           customerService.getAllCustomers().catch(() => [])
         ]);
 
-        // Load products từ cả drinks và cakes
         const [drinks, cakes, toppings] = await Promise.all([
           drinkService.getAllDrinks().catch(() => []),
           cakeService.getAllCakes().catch(() => []),
           toppingService.getAllToppings().catch(() => [])
         ]);
 
-        // Load orders
         const orders = await orderService.getAllOrders().catch(() => []);
 
         setSharedData({
@@ -90,14 +130,16 @@ const AdminDashboard = () => {
           orders: orders,
           customers: allCustomers,
           shippers: allShippers,
-          pendingShippers: pendingShippers
+          pendingShippers: pendingShippers,
+          fallbackMode: true
         });
       } catch (error) {
-        console.log('Could not load shared data:', error);
+        console.error('❌ Fallback data loading also failed:', error);
+        showNotification('Connection Error', 'Không thể kết nối tới server', 'error');
       }
     };
 
-    loadSharedData();
+    loadDashboardData();
   }, []);
 
   // Notification system functions
@@ -193,6 +235,18 @@ const AdminDashboard = () => {
       icon: <FiTruck size={20} />,
       description: 'Phê duyệt và quản lý shipper'
     },
+    {
+      id: 'inventory',
+      label: 'Quản lý Kho hàng',
+      icon: <FiBox size={20} />,
+      description: 'Theo dõi tồn kho và cảnh báo'
+    },
+    {
+      id: 'analytics',
+      label: 'Phân tích kinh doanh',
+      icon: <FiTrendingUp size={20} />,
+      description: 'Báo cáo và thống kê chi tiết'
+    },
     
   ];
 
@@ -206,6 +260,8 @@ const AdminDashboard = () => {
             allCustomers={sharedData.customers}
             allShippers={sharedData.shippers}
             pendingShippers={sharedData.pendingShippers}
+            dashboardData={sharedData.dashboardData}
+            fallbackMode={sharedData.fallbackMode}
           />
         );
       case 'products':
@@ -216,6 +272,10 @@ const AdminDashboard = () => {
         return <CustomersContent showNotification={showNotification} showConfirmModal={showConfirmModal} />;
       case 'shippers':
         return <ShippersContent showNotification={showNotification} showConfirmModal={showConfirmModal} />;
+      case 'inventory':
+        return <InventoryContent showNotification={showNotification} />;
+      case 'analytics':
+        return <AnalyticsContent showNotification={showNotification} />;
       
       default:
         return (
@@ -225,6 +285,8 @@ const AdminDashboard = () => {
             allCustomers={sharedData.customers}
             allShippers={sharedData.shippers}
             pendingShippers={sharedData.pendingShippers}
+            dashboardData={sharedData.dashboardData}
+            fallbackMode={sharedData.fallbackMode}
           />
         );
     }
@@ -355,7 +417,9 @@ const OverviewContent = ({
   allOrders = [], 
   allCustomers = [], 
   allShippers = [], 
-  pendingShippers = [] 
+  pendingShippers = [],
+  dashboardData = null,
+  fallbackMode = false
 }) => {
   const [overviewStats, setOverviewStats] = useState({
     totalRevenue: 0,
@@ -370,17 +434,47 @@ const OverviewContent = ({
     topProduct: 'N/A'
   });
 
+  const [stockAlerts, setStockAlerts] = useState(null);
+  const [realtimeData, setRealtimeData] = useState(null);
+  const [lastUpdate, setLastUpdate] = useState(null);
+
+  // Load optimized dashboard data or fallback to manual calculation
   useEffect(() => {
-    // Tính toán stats từ dữ liệu thực
-    const calculateStats = () => {
+    if (dashboardData && !fallbackMode) {
+      // 🎯 Use optimized dashboard API data
+      console.log('✅ Using optimized dashboard data:', dashboardData.overviewStats);
+      setOverviewStats({
+        totalRevenue: dashboardData.overviewStats.totalRevenue || 0,
+        todayOrders: dashboardData.overviewStats.todayOrders || 0,
+        totalProducts: dashboardData.statistics?.inventory?.drinks?.total + 
+                      dashboardData.statistics?.inventory?.cakes?.total + 
+                      dashboardData.statistics?.inventory?.toppings?.total || 0,
+        totalCustomers: dashboardData.overviewStats.totalCustomers || 0,
+        totalShippers: dashboardData.statistics?.users?.shippers || 0,
+        pendingShippers: dashboardData.statistics?.users?.pendingShippers || 0,
+        completedOrders: dashboardData.statistics?.orders?.status?.completed || 0,
+        activeOrders: dashboardData.overviewStats.pendingOrders || 0,
+        avgOrderValue: dashboardData.statistics?.orders?.thisWeek?.averageOrderValue || 0,
+        topProduct: dashboardData.charts?.topProducts?.[0]?.productName || 'N/A',
+        // Growth indicators
+        revenueGrowth: dashboardData.overviewStats.revenueGrowth || 0,
+        ordersGrowth: dashboardData.overviewStats.ordersGrowth || 0,
+        customersGrowth: dashboardData.overviewStats.customersGrowth || 0
+      });
+      
+      // Set stock alerts from dashboard data
+      setStockAlerts(dashboardData.stockAlerts || null);
+      setLastUpdate(new Date());
+      
+    } else {
+      // 🔄 Fallback: Manual calculation from individual API data
+      console.log('🔄 Using fallback manual calculation');
       const today = new Date().toDateString();
       
-      // Lọc đơn hàng hôm nay
       const todayOrders = allOrders.filter(order => 
         new Date(order.createdAt || order.orderDate || Date.now()).toDateString() === today
       );
       
-      // Tính tổng doanh thu từ đơn hàng hoàn thành
       const completedOrders = allOrders.filter(order => 
         order.status === 'completed' || order.status === 'delivered'
       );
@@ -389,17 +483,14 @@ const OverviewContent = ({
         sum + (order.totalAmount || order.total || 0), 0
       );
       
-      // Tính đơn hàng đang xử lý
       const activeOrders = allOrders.filter(order => 
         order.status === 'pending' || order.status === 'processing' || order.status === 'confirmed'
       ).length;
       
-      // Tính giá trị đơn hàng trung bình
       const avgOrderValue = completedOrders.length > 0 
         ? totalRevenue / completedOrders.length 
         : 0;
       
-      // Tìm sản phẩm phổ biến nhất (giả sử)
       const topProduct = allProducts.length > 0 
         ? allProducts[0]?.name || 'N/A' 
         : 'N/A';
@@ -416,34 +507,96 @@ const OverviewContent = ({
         avgOrderValue,
         topProduct
       });
-    };
+      
+      // Load stock alerts separately for fallback mode
+      loadStockAlertsForFallback();
+    }
+  }, [dashboardData, allProducts, allOrders, allCustomers, allShippers, pendingShippers, fallbackMode]);
 
-    calculateStats();
-  }, [allProducts, allOrders, allCustomers, allShippers, pendingShippers]);
+  // Load stock alerts for fallback mode only
+  const loadStockAlertsForFallback = async () => {
+    try {
+      const token = localStorage.getItem('id_token');
+      if (token) {
+        const alertsResponse = await inventoryService.getStockAlerts(token);
+        setStockAlerts(alertsResponse);
+      }
+    } catch (error) {
+      console.log('Could not load stock alerts for fallback mode:', error);
+    }
+  };
+
+  // Real-time updates (every 5 minutes)
+  useEffect(() => {
+    if (!fallbackMode) {
+      const interval = setInterval(async () => {
+        try {
+          console.log('⚡ Fetching real-time updates...');
+          const realtimeResponse = await dashboardService.getRealtimeMetrics();
+          
+          if (realtimeResponse.success) {
+            setRealtimeData(realtimeResponse.data);
+            setLastUpdate(new Date(realtimeResponse.data.lastUpdated));
+            console.log('✅ Real-time data updated:', realtimeResponse.data);
+          }
+        } catch (error) {
+          console.log('❌ Real-time update failed:', error);
+        }
+      }, 5 * 60 * 1000); // 5 minutes
+
+      return () => clearInterval(interval);
+    }
+  }, [fallbackMode]);
 
   return (
     <div className="overview-content">
       <div className="stats-grid">
+        {/* Header with last update time */}
+        {lastUpdate && (
+          <div className="stats-header">
+            <span className="last-update">
+              🔄 Cập nhật lần cuối: {lastUpdate.toLocaleTimeString('vi-VN')}
+            </span>
+            {fallbackMode && (
+              <span className="fallback-badge">🔄 Chế độ dự phòng</span>
+            )}
+          </div>
+        )}
+        
         <div className="stat-card">
           <div className="stat-icon">💰</div>
           <div className="stat-info">
             <h3>Tổng doanh thu</h3>
-            <p className="stat-value">₫{overviewStats.totalRevenue.toLocaleString('vi-VN')}</p>
-            <span className="stat-change positive">
-              {overviewStats.completedOrders} đơn hoàn thành
+            <p className="stat-value">
+              {dashboardService.formatCurrency(overviewStats.totalRevenue)}
+            </p>
+            <span className={`stat-change ${
+              overviewStats.revenueGrowth >= 0 ? 'positive' : 'negative'
+            }`}>
+              {overviewStats.revenueGrowth ? 
+                dashboardService.formatPercentage(overviewStats.revenueGrowth) + ' so với tuần trước' :
+                `${overviewStats.completedOrders} đơn hoàn thành`
+              }
             </span>
           </div>
         </div>
+        
         <div className="stat-card">
           <div className="stat-icon">📋</div>
           <div className="stat-info">
             <h3>Đơn hàng hôm nay</h3>
-            <p className="stat-value">{overviewStats.todayOrders}</p>
-            <span className="stat-change positive">
-              {overviewStats.activeOrders} đang xử lý
+            <p className="stat-value">{realtimeData?.todayOrders || overviewStats.todayOrders}</p>
+            <span className={`stat-change ${
+              overviewStats.ordersGrowth >= 0 ? 'positive' : 'negative'
+            }`}>
+              {overviewStats.ordersGrowth ? 
+                dashboardService.formatPercentage(overviewStats.ordersGrowth) + ' so với hôm qua' :
+                `${realtimeData?.pendingOrders || overviewStats.activeOrders} đang xử lý`
+              }
             </span>
           </div>
         </div>
+        
         <div className="stat-card">
           <div className="stat-icon">☕</div>
           <div className="stat-info">
@@ -454,16 +607,23 @@ const OverviewContent = ({
             </span>
           </div>
         </div>
+        
         <div className="stat-card">
           <div className="stat-icon">👥</div>
           <div className="stat-info">
             <h3>Khách hàng</h3>
             <p className="stat-value">{overviewStats.totalCustomers}</p>
-            <span className="stat-change positive">
-              TB: ₫{Math.round(overviewStats.avgOrderValue).toLocaleString('vi-VN')}
+            <span className={`stat-change ${
+              overviewStats.customersGrowth >= 0 ? 'positive' : 'negative'
+            }`}>
+              {overviewStats.customersGrowth ? 
+                dashboardService.formatPercentage(overviewStats.customersGrowth) + ' tuần này' :
+                `TB: ${dashboardService.formatCurrency(overviewStats.avgOrderValue)}`
+              }
             </span>
           </div>
         </div>
+        
         <div className="stat-card">
           <div className="stat-icon">🚚</div>
           <div className="stat-info">
@@ -472,7 +632,26 @@ const OverviewContent = ({
             <span className={`stat-change ${overviewStats.pendingShippers > 0 ? 'warning' : ''}`}>
               {overviewStats.pendingShippers > 0 
                 ? `${overviewStats.pendingShippers} chờ duyệt` 
-                : 'Tất cả hoạt động'
+                : `${realtimeData?.activeShippers || 0} đang giao hàng`
+              }
+            </span>
+          </div>
+        </div>
+        
+        <div className="stat-card">
+          <div className="stat-icon">📦</div>
+          <div className="stat-info">
+            <h3>Kho hàng</h3>
+            <p className="stat-value">{stockAlerts ? stockAlerts.totalAlerts || 0 : 0}</p>
+            <span className={`stat-change ${
+              stockAlerts?.critical > 0 ? 'critical' : 
+              stockAlerts?.warnings > 0 ? 'warning' : 'positive'
+            }`}>
+              {stockAlerts?.critical > 0 
+                ? `${stockAlerts.critical} hết hàng` 
+                : stockAlerts?.warnings > 0 
+                ? `${stockAlerts.warnings} sắp hết` 
+                : 'Tình trạng tốt'
               }
             </span>
           </div>
@@ -482,69 +661,159 @@ const OverviewContent = ({
       <div className="recent-activities">
         <h3>Hoạt động gần đây</h3>
         <div className="activity-list">
-          {/* Hiển thị đơn hàng gần đây */}
-          {allOrders.slice(0, 3).map((order, index) => (
-            <div key={`order-${index}`} className="activity-item">
-              <span className="activity-icon">📋</span>
-              <div className="activity-info">
-                <p>Đơn hàng #{order.id || order.orderNumber || `00${index + 1}`} được tạo</p>
-                <small>
-                  Giá trị: ₫{(order.totalAmount || order.total || 0).toLocaleString('vi-VN')} - 
-                  Trạng thái: {order.status === 'pending' ? 'Chờ xử lý' : 
-                            order.status === 'completed' ? 'Hoàn thành' : 
-                            order.status === 'processing' ? 'Đang xử lý' : order.status}
-                </small>
+          {dashboardData && !fallbackMode ? (
+            // ✅ Use optimized dashboard activities
+            dashboardData.recentActivities.length > 0 ? (
+              dashboardData.recentActivities.map((activity, index) => {
+                // 🎯 Chỉ hiển thị order status cho đơn hàng, các hoạt động khác có status riêng
+                const getActivityStatusText = (activity) => {
+                  switch (activity.type) {
+                    case 'order':
+                      return dashboardService.getStatusDisplay(activity.status).text;
+                    case 'user':
+                      return activity.action === 'registered' ? 'Đã đăng ký' : 'Hoạt động';
+                    case 'shipper':
+                      return activity.action === 'approved' ? 'Đã phê duyệt' : 'Chờ xử lý';
+                    case 'product':
+                      return 'Cập nhật';
+                    default:
+                      return 'Hoàn thành';
+                  }
+                };
+                
+                const getActivityStatusClass = (activity) => {
+                  switch (activity.type) {
+                    case 'order':
+                      return `status-${activity.status?.toLowerCase()}`;
+                    case 'user':
+                      return 'status-completed';
+                    case 'shipper':
+                      return activity.action === 'approved' ? 'status-completed' : 'status-pending';
+                    case 'product':
+                      return 'status-confirmed';
+                    default:
+                      return 'status-completed';
+                  }
+                };
+                
+                return (
+                  <div key={`activity-${index}`} className={`activity-item priority-${activity.priority}`}>
+                    
+                    <div className="activity-info">
+                      <p>
+                        {activity.description}
+                        {activity.amount && (
+                          <span className="activity-amount">
+                            {dashboardService.formatCurrency(activity.amount)}
+                          </span>
+                        )}
+                      </p>
+                      <small>
+                        <span className="activity-time">
+                          {dashboardService.formatDate(activity.timestamp)}
+                        </span>
+                        <span className={`activity-status ${getActivityStatusClass(activity)}`}>
+                          {getActivityStatusText(activity)}
+                        </span>
+                      </small>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="activity-item">
+                <span className="activity-icon">📝</span>
+                <div className="activity-info">
+                  <p>Chưa có hoạt động nào</p>
+                  <small>Dữ liệu sẽ hiển thị khi có thông tin từ hệ thống</small>
+                </div>
               </div>
-            </div>
-          ))}
-          
-          {/* Hiển thị sản phẩm được cập nhật gần đây */}
-          {allProducts.slice(0, 2).map((product, index) => (
-            <div key={`product-${index}`} className="activity-item">
-              <span className="activity-icon">☕</span>
-              <div className="activity-info">
-                <p>Sản phẩm "{product.name}" được cập nhật</p>
-                <small>
-                  Giá: ₫{(product.price || 0).toLocaleString('vi-VN')} - 
-                  Loại: {product.type === 'drink' ? 'Đồ uống' : 'Bánh'}
-                </small>
-              </div>
-            </div>
-          ))}
-          
-          {/* Hiển thị khách hàng mới */}
-          {allCustomers.slice(-2).map((customer, index) => (
-            <div key={`customer-${index}`} className="activity-item">
-              <span className="activity-icon">👥</span>
-              <div className="activity-info">
-                <p>Khách hàng mới: {customer.name || customer.username}</p>
-                <small>Email: {customer.email}</small>
-              </div>
-            </div>
-          ))}
-          
-          {/* Hiển thị shipper chờ duyệt nếu có */}
-          {pendingShippers.slice(0, 1).map((shipper, index) => (
-            <div key={`shipper-${index}`} className="activity-item">
-              <span className="activity-icon">🚚</span>
-              <div className="activity-info">
-                <p>Shipper "{shipper.name}" chờ phê duyệt</p>
-                <small>SĐT: {shipper.phone} - Khu vực: {shipper.area}</small>
-              </div>
-            </div>
-          ))}
-          
-          {/* Fallback nếu không có dữ liệu */}
-          {allOrders.length === 0 && allProducts.length === 0 && allCustomers.length === 0 && (
-            <div className="activity-item">
-              <span className="activity-icon">📝</span>
-              <div className="activity-info">
-                <p>Chưa có hoạt động nào</p>
-                <small>Dữ liệu sẽ hiển thị khi có thông tin từ hệ thống</small>
-              </div>
-            </div>
+            )
+          ) : (
+            // 🔄 Fallback: Manual activities display
+            <>
+              {allOrders.slice(0, 3).map((order, index) => (
+                <div key={`order-${index}`} className="activity-item">
+                  <span className="activity-icon">📋</span>
+                  <div className="activity-info">
+                    <p>Đơn hàng #{order.id || order.orderNumber || `00${index + 1}`} được tạo</p>
+                    <small>
+                      <span className="activity-time">
+                        {dashboardService.formatDate(order.createdAt || Date.now())}
+                      </span>
+                      <span className={`activity-status status-${order.status?.toLowerCase() || 'pending'}`}>
+                        {dashboardService.getStatusDisplay(order.status || 'Pending').text}
+                      </span>
+                    </small>
+                  </div>
+                </div>
+              ))}
+              
+              {allProducts.slice(0, 2).map((product, index) => (
+                <div key={`product-${index}`} className="activity-item">
+                  <span className="activity-icon">☕</span>
+                  <div className="activity-info">
+                    <p>Sản phẩm "{product.name}" được cập nhật</p>
+                    <small>
+                      <span className="activity-time">
+                        {dashboardService.formatDate(product.updatedAt || Date.now())}
+                      </span>
+                      <span className="activity-status status-confirmed">
+                        Cập nhật
+                      </span>
+                    </small>
+                  </div>
+                </div>
+              ))}
+              
+              {allCustomers.slice(-2).map((customer, index) => (
+                <div key={`customer-${index}`} className="activity-item">
+                  <span className="activity-icon">👥</span>
+                  <div className="activity-info">
+                    <p>Khách hàng mới: {customer.name || customer.username}</p>
+                    <small>
+                      <span className="activity-time">
+                        {dashboardService.formatDate(customer.createdAt || Date.now())}
+                      </span>
+                      <span className="activity-status status-completed">
+                        Đã đăng ký
+                      </span>
+                    </small>
+                  </div>
+                </div>
+              ))}
+              
+              {pendingShippers.slice(0, 1).map((shipper, index) => (
+                <div key={`shipper-${index}`} className="activity-item">
+                  <span className="activity-icon">🚚</span>
+                  <div className="activity-info">
+                    <p>Shipper "{shipper.name}" chờ phê duyệt</p>
+                    <small>
+                      <span className="activity-time">
+                        {dashboardService.formatDate(shipper.createdAt || Date.now())}
+                      </span>
+                      <span className="activity-status status-pending">
+                        Chờ xử lý
+                      </span>
+                    </small>
+                  </div>
+                </div>
+              ))}
+              
+              {allOrders.length === 0 && allProducts.length === 0 && allCustomers.length === 0 && (
+                <div className="activity-item">
+                  <span className="activity-icon">📝</span>
+                  <div className="activity-info">
+                    <p>Chưa có hoạt động nào</p>
+                    <small>Dữ liệu sẽ hiển thị khi có thông tin từ hệ thống</small>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
+        
+        
       </div>
     </div>
   );
@@ -1910,6 +2179,248 @@ const CustomersContent = ({ showNotification, showConfirmModal }) => {
   );
 };
 
+const InventoryContent = ({ showNotification }) => {
+  const [inventoryData, setInventoryData] = useState(null);
+  const [stockAlerts, setStockAlerts] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadInventoryData();
+  }, []);
+
+  const loadInventoryData = async () => {
+    try {
+      const token = localStorage.getItem('id_token');
+      if (!token) {
+        showNotification('Lỗi!', 'Chưa đăng nhập', 'error');
+        return;
+      }
+
+      setLoading(true);
+      const [overviewResponse, alertsResponse] = await Promise.all([
+        inventoryService.getInventoryOverview(token),
+        inventoryService.getStockAlerts(token)
+      ]);
+
+      const formattedData = inventoryService.formatInventoryStats(overviewResponse);
+      setInventoryData(formattedData);
+      setStockAlerts(alertsResponse);
+      
+      console.log('✅ Inventory data loaded:', { formattedData, alertsResponse });
+      
+    } catch (error) {
+      console.error('❌ Error loading inventory:', error);
+      showNotification('Lỗi!', 'Không thể tải dữ liệu kho hàng', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="inventory-content">
+        <div className="loading-container">
+          <div className="coffee-loading">📦</div>
+          <p>Đang tải dữ liệu kho hàng...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="inventory-content">
+      {/* Header */}
+      <div className="content-header">
+        <div className="header-title">
+          <FiBox size={24} />
+          <h2>Quản lý Kho hàng</h2>
+          {stockAlerts && (
+            <span className={`alerts-badge ${stockAlerts.critical > 0 ? 'critical' : stockAlerts.warnings > 0 ? 'warning' : 'good'}`}>
+              {stockAlerts.totalAlerts > 0 ? `${stockAlerts.totalAlerts} cảnh báo` : 'Tốt'}
+            </span>
+          )}
+        </div>
+        
+        <div className="header-actions">
+          <button onClick={loadInventoryData} className="refresh-btn">
+            <FiGlobe size={16} />
+            Làm mới
+          </button>
+        </div>
+      </div>
+
+      {/* Inventory Stats Grid */}
+      {inventoryData && (
+        <div className="inventory-stats-grid">
+          {/* Drinks Stats */}
+          <div className="inventory-category-card drinks">
+            <div className="category-header">
+              <FiCoffee size={24} />
+              <h3>Đồ uống</h3>
+            </div>
+            <div className="category-stats">
+              <div className="stat-row">
+                <span className="stat-label">Tổng sản phẩm:</span>
+                <span className="stat-value">{inventoryData.drinks.total}</span>
+              </div>
+              <div className="stat-row">
+                <span className="stat-label">Còn hàng:</span>
+                <span className="stat-value good">{inventoryData.drinks.inStock}</span>
+              </div>
+              <div className="stat-row">
+                <span className="stat-label">Hết hàng:</span>
+                <span className="stat-value critical">{inventoryData.drinks.outOfStock}</span>
+              </div>
+              <div className="stat-row">
+                <span className="stat-label">Sắp hết:</span>
+                <span className="stat-value warning">{inventoryData.drinks.lowStock}</span>
+              </div>
+              <div className="stat-row total-value">
+                <span className="stat-label">Giá trị kho:</span>
+                <span className="stat-value">₫{inventoryData.drinks.totalValue.toLocaleString('vi-VN')}</span>
+              </div>
+            </div>
+            <div className="stock-progress">
+              <div className="progress-bar">
+                <div 
+                  className="progress-fill drinks" 
+                  style={{ width: `${inventoryData.drinks.stockPercentage}%` }}
+                ></div>
+              </div>
+              <span className="progress-text">{inventoryData.drinks.stockPercentage}% còn hàng</span>
+            </div>
+          </div>
+
+          {/* Cakes Stats */}
+          <div className="inventory-category-card cakes">
+            <div className="category-header">
+              <FiBox size={24} />
+              <h3>Bánh</h3>
+            </div>
+            <div className="category-stats">
+              <div className="stat-row">
+                <span className="stat-label">Tổng sản phẩm:</span>
+                <span className="stat-value">{inventoryData.cakes.total}</span>
+              </div>
+              <div className="stat-row">
+                <span className="stat-label">Còn hàng:</span>
+                <span className="stat-value good">{inventoryData.cakes.inStock}</span>
+              </div>
+              <div className="stat-row">
+                <span className="stat-label">Hết hàng:</span>
+                <span className="stat-value critical">{inventoryData.cakes.outOfStock}</span>
+              </div>
+              <div className="stat-row">
+                <span className="stat-label">Sắp hết:</span>
+                <span className="stat-value warning">{inventoryData.cakes.lowStock}</span>
+              </div>
+              <div className="stat-row total-value">
+                <span className="stat-label">Giá trị kho:</span>
+                <span className="stat-value">₫{inventoryData.cakes.totalValue.toLocaleString('vi-VN')}</span>
+              </div>
+            </div>
+            <div className="stock-progress">
+              <div className="progress-bar">
+                <div 
+                  className="progress-fill cakes" 
+                  style={{ width: `${inventoryData.cakes.stockPercentage}%` }}
+                ></div>
+              </div>
+              <span className="progress-text">{inventoryData.cakes.stockPercentage}% còn hàng</span>
+            </div>
+          </div>
+
+          {/* Toppings Stats */}
+          <div className="inventory-category-card toppings">
+            <div className="category-header">
+              <FiStar size={24} />
+              <h3>Topping</h3>
+            </div>
+            <div className="category-stats">
+              <div className="stat-row">
+                <span className="stat-label">Tổng sản phẩm:</span>
+                <span className="stat-value">{inventoryData.toppings.total}</span>
+              </div>
+              <div className="stat-row">
+                <span className="stat-label">Còn hàng:</span>
+                <span className="stat-value good">{inventoryData.toppings.inStock}</span>
+              </div>
+              <div className="stat-row">
+                <span className="stat-label">Hết hàng:</span>
+                <span className="stat-value critical">{inventoryData.toppings.outOfStock}</span>
+              </div>
+              <div className="stat-row">
+                <span className="stat-label">Sắp hết:</span>
+                <span className="stat-value warning">{inventoryData.toppings.lowStock}</span>
+              </div>
+              <div className="stat-row total-value">
+                <span className="stat-label">Giá trị kho:</span>
+                <span className="stat-value">₫{inventoryData.toppings.totalValue.toLocaleString('vi-VN')}</span>
+              </div>
+            </div>
+            <div className="stock-progress">
+              <div className="progress-bar">
+                <div 
+                  className="progress-fill toppings" 
+                  style={{ width: `${inventoryData.toppings.stockPercentage}%` }}
+                ></div>
+              </div>
+              <span className="progress-text">{inventoryData.toppings.stockPercentage}% còn hàng</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Stock Alerts Section */}
+      {stockAlerts && stockAlerts.alerts && stockAlerts.alerts.length > 0 && (
+        <div className="stock-alerts-section">
+          <div className="section-header">
+            <h3>🚨 Cảnh báo Kho hàng</h3>
+            <div className="alerts-summary">
+              {stockAlerts.critical > 0 && (
+                <span className="alert-count critical">{stockAlerts.critical} hết hàng</span>
+              )}
+              {stockAlerts.warnings > 0 && (
+                <span className="alert-count warning">{stockAlerts.warnings} sắp hết</span>
+              )}
+            </div>
+          </div>
+          
+          <div className="alerts-grid">
+            {stockAlerts.alerts.map((alert, index) => (
+              <div key={index} className={`alert-card ${alert.severity}`}>
+                <div className="alert-header">
+                  <span className="alert-icon">
+                    {inventoryService.getAlertIcon(alert.severity)}
+                  </span>
+                  <span className="alert-type-badge">{alert.type}</span>
+                </div>
+                <div className="alert-content">
+                  <h4>{alert.name}</h4>
+                  <p className="alert-message">{alert.message}</p>
+                  <div className="alert-details">
+                    <span className="current-stock">Hiện tại: {alert.stock} sản phẩm</span>
+                  </div>
+                </div>
+                
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* No Alerts State */}
+      {stockAlerts && (!stockAlerts.alerts || stockAlerts.alerts.length === 0) && (
+        <div className="no-alerts-state">
+          <div className="no-alerts-icon">✅</div>
+          <h3>Kho hàng ổn định</h3>
+          <p>Hiện tại không có cảnh báo nào về tình trạng kho hàng.</p>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const ShippersContent = ({ showNotification, showConfirmModal }) => {
   const [shippers, setShippers] = useState([]);
   const [pendingShippers, setPendingShippers] = useState([]);
@@ -2303,6 +2814,326 @@ const ShippersContent = ({ showNotification, showConfirmModal }) => {
           </div>
         </div>
       )}
+    </div>
+  );
+};
+
+const AnalyticsContent = ({ showNotification }) => {
+  const [analyticsData, setAnalyticsData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [selectedPeriod, setSelectedPeriod] = useState(30);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Load analytics data
+  const loadAnalyticsData = async (days = 30) => {
+    try {
+      setLoading(true);
+      setError(null);
+      console.log(`📊 Loading analytics data for ${days} days...`);
+      
+      const response = await dashboardService.getPerformanceAnalytics(days);
+      
+      if (response.success) {
+        setAnalyticsData(response.data);
+        console.log('✅ Analytics data loaded:', response.data);
+        showNotification('Analytics loaded', `Dữ liệu phân tích ${days} ngày đã được tải`, 'success', 2000);
+      } else {
+        throw new Error('Analytics API returned unsuccessful response');
+      }
+    } catch (error) {
+      console.error('❌ Failed to load analytics:', error);
+      setError(error.message);
+      showNotification('Lỗi tải dữ liệu', 'Không thể tải dữ liệu phân tích', 'error');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  // Handle period change
+  const handlePeriodChange = (days) => {
+    setSelectedPeriod(days);
+    loadAnalyticsData(days);
+  };
+
+  // Refresh data
+  const handleRefresh = () => {
+    setRefreshing(true);
+    loadAnalyticsData(selectedPeriod);
+  };
+
+  // Load data on mount
+  useEffect(() => {
+    loadAnalyticsData(selectedPeriod);
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="analytics-content">
+        <div className="loading-container">
+          <div className="coffee-loading">📊</div>
+          <p>Đang tải dữ liệu phân tích...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="analytics-content">
+        <div className="error-container">
+          <div className="error-icon">📊⚠️</div>
+          <h3>Không thể tải dữ liệu phân tích</h3>
+          <p>{error}</p>
+          <button onClick={() => loadAnalyticsData(selectedPeriod)} className="retry-btn">
+            🔄 Thử lại
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="analytics-content">
+      {/* Header with period selector */}
+      <div className="analytics-header">
+        <div className="header-title">
+          <h2>📈 Phân tích kinh doanh</h2>
+          <span className="period-info">{analyticsData?.period || `Last ${selectedPeriod} days`}</span>
+        </div>
+        
+        <div className="header-actions">
+          <div className="period-selector">
+            <button 
+              className={`period-btn ${selectedPeriod === 7 ? 'active' : ''}`}
+              onClick={() => handlePeriodChange(7)}
+            >
+              7 ngày
+            </button>
+            <button 
+              className={`period-btn ${selectedPeriod === 30 ? 'active' : ''}`}
+              onClick={() => handlePeriodChange(30)}
+            >
+              30 ngày
+            </button>
+            <button 
+              className={`period-btn ${selectedPeriod === 90 ? 'active' : ''}`}
+              onClick={() => handlePeriodChange(90)}
+            >
+              90 ngày
+            </button>
+          </div>
+          
+          <button 
+            onClick={handleRefresh} 
+            className={`refresh-btn ${refreshing ? 'refreshing' : ''}`}
+            disabled={refreshing}
+          >
+            🔄 {refreshing ? 'Đang tải...' : 'Làm mới'}
+          </button>
+        </div>
+      </div>
+
+      {/* Analytics Grid */}
+      <div className="analytics-grid">
+        
+        {/* Revenue Analytics */}
+        <div className="analytics-card revenue-card">
+          <div className="card-header">
+            <h3>💰 Phân tích Doanh thu</h3>
+            <span className="growth-badge">
+              {analyticsData?.revenue?.growth ? 
+                dashboardService.formatPercentage(analyticsData.revenue.growth) : '0%'
+              }
+            </span>
+          </div>
+          <div className="card-content">
+            <div className="metric-row">
+              <span className="metric-label">Tổng doanh thu:</span>
+              <span className="metric-value">
+                {dashboardService.formatCurrency(analyticsData?.revenue?.total || 0)}
+              </span>
+            </div>
+            <div className="metric-row">
+              <span className="metric-label">Doanh thu trung bình/đơn:</span>
+              <span className="metric-value">
+                {dashboardService.formatCurrency(analyticsData?.revenue?.average || 0)}
+              </span>
+            </div>
+            <div className="metric-row">
+              <span className="metric-label">Tăng trưởng:</span>
+              <span className={`metric-value ${
+                (analyticsData?.revenue?.growth || 0) >= 0 ? 'positive' : 'negative'
+              }`}>
+                {dashboardService.formatPercentage(analyticsData?.revenue?.growth || 0)}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Orders Analytics */}
+        <div className="analytics-card orders-card">
+          <div className="card-header">
+            <h3>📋 Phân tích Đơn hàng</h3>
+            <span className="completion-badge">
+              {Math.round(analyticsData?.orders?.completionRate || 0)}% hoàn thành
+            </span>
+          </div>
+          <div className="card-content">
+            <div className="metric-row">
+              <span className="metric-label">Tổng đơn hàng:</span>
+              <span className="metric-value">{analyticsData?.orders?.total || 0}</span>
+            </div>
+            <div className="metric-row">
+              <span className="metric-label">Đơn hoàn thành:</span>
+              <span className="metric-value positive">
+                {analyticsData?.orders?.completed || 0}
+              </span>
+            </div>
+            <div className="metric-row">
+              <span className="metric-label">Đơn hủy:</span>
+              <span className="metric-value negative">
+                {analyticsData?.orders?.cancelled || 0}
+              </span>
+            </div>
+            <div className="metric-row">
+              <span className="metric-label">Tỷ lệ hoàn thành:</span>
+              <span className="metric-value">
+                {Math.round(analyticsData?.orders?.completionRate || 0)}%
+              </span>
+            </div>
+            <div className="metric-row">
+              <span className="metric-label">Giá trị TB/đơn:</span>
+              <span className="metric-value">
+                {dashboardService.formatCurrency(analyticsData?.orders?.averageOrderValue || 0)}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Customer Analytics */}
+        <div className="analytics-card customers-card">
+          <div className="card-header">
+            <h3>👥 Phân tích Khách hàng</h3>
+            <span className="retention-badge">
+              {Math.round(analyticsData?.customers?.retention_rate || 0)}% quay lại
+            </span>
+          </div>
+          <div className="card-content">
+            <div className="metric-row">
+              <span className="metric-label">Khách hàng mới:</span>
+              <span className="metric-value positive">
+                {analyticsData?.customers?.new_customers || 0}
+              </span>
+            </div>
+            <div className="metric-row">
+              <span className="metric-label">Khách quay lại:</span>
+              <span className="metric-value">
+                {analyticsData?.customers?.returning_customers || 0}
+              </span>
+            </div>
+            <div className="metric-row">
+              <span className="metric-label">Tỷ lệ giữ chân:</span>
+              <span className="metric-value">
+                {Math.round(analyticsData?.customers?.retention_rate || 0)}%
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Daily Revenue Chart */}
+        <div className="analytics-card chart-card daily-revenue">
+          <div className="card-header">
+            <h3>📊 Doanh thu hàng ngày</h3>
+          </div>
+          <div className="card-content">
+            {analyticsData?.revenue?.daily && analyticsData.revenue.daily.length > 0 ? (
+              <div className="chart-container">
+                <div className="simple-chart">
+                  {analyticsData.revenue.daily.slice(-14).map((item, index) => {
+                    const maxRevenue = Math.max(...analyticsData.revenue.daily.map(d => d.revenue));
+                    const height = maxRevenue > 0 ? (item.revenue / maxRevenue * 100) : 0;
+                    return (
+                      <div key={index} className="chart-bar" title={`${item.date}: ${dashboardService.formatCurrency(item.revenue)}`}>
+                        <div 
+                          className="bar-fill" 
+                          style={{ height: `${height}%` }}
+                        ></div>
+                        <div className="bar-label">
+                          {new Date(item.date).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              <div className="no-data">
+                <span>📊</span>
+                <p>Chưa có dữ liệu biểu đồ</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Performance Summary */}
+        <div className="analytics-card summary-card">
+          <div className="card-header">
+            <h3>🎯 Tóm tắt hiệu suất</h3>
+          </div>
+          <div className="card-content">
+            <div className="summary-grid">
+              <div className="summary-item">
+                <div className="summary-icon">💰</div>
+                <div className="summary-info">
+                  <span className="summary-label">Doanh thu cao nhất/ngày</span>
+                  <span className="summary-value">
+                    {analyticsData?.revenue?.daily ? 
+                      dashboardService.formatCurrency(
+                        Math.max(...analyticsData.revenue.daily.map(d => d.revenue))
+                      ) : '0₫'
+                    }
+                  </span>
+                </div>
+              </div>
+              
+              <div className="summary-item">
+                <div className="summary-icon">📈</div>
+                <div className="summary-info">
+                  <span className="summary-label">Tăng trưởng doanh thu</span>
+                  <span className={`summary-value ${
+                    (analyticsData?.revenue?.growth || 0) >= 0 ? 'positive' : 'negative'
+                  }`}>
+                    {dashboardService.formatPercentage(analyticsData?.revenue?.growth || 0)}
+                  </span>
+                </div>
+              </div>
+              
+              <div className="summary-item">
+                <div className="summary-icon">🎯</div>
+                <div className="summary-info">
+                  <span className="summary-label">Tỷ lệ thành công</span>
+                  <span className="summary-value">
+                    {Math.round(analyticsData?.orders?.completionRate || 0)}%
+                  </span>
+                </div>
+              </div>
+              
+              <div className="summary-item">
+                <div className="summary-icon">👥</div>
+                <div className="summary-info">
+                  <span className="summary-label">Khách hàng trung thành</span>
+                  <span className="summary-value">
+                    {Math.round(analyticsData?.customers?.retention_rate || 0)}%
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
     </div>
   );
 };
