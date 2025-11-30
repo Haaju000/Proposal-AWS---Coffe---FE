@@ -7,6 +7,7 @@ import toppingService from '../services/toppingService';
 import orderService from '../services/orderService';
 import customerService from '../services/customerService';
 import shipperService from '../services/shipperService';
+import imageService from '../services/imageService';
 import '../css/AdminDashboard-new.css';
 
 // React Icons
@@ -786,12 +787,14 @@ const ProductFormModal = ({ product, isEditing, onClose, onSuccess, showNotifica
     // For drinks only
     basePrice: product?.basePrice || '',
     category: product?.category || 'Coffee',
-    // Common optional field
+    // S3 Image URL from Swagger upload
     imageUrl: product?.imageUrl || ''
   });
   
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
+
+
 
   // Validation functions
   const validateForm = () => {
@@ -859,19 +862,15 @@ const ProductFormModal = ({ product, isEditing, onClose, onSuccess, showNotifica
     setLoading(true);
 
     try {
-      const token = localStorage.getItem('id_token'); // Sử dụng id_token từ Cognito
-      console.log('🔑 Token being used:', token ? 'Token exists' : 'No token found');
-      console.log('🔑 Token length:', token ? token.length : 0);
-      
-      // Debug: In tất cả keys trong localStorage
-      console.log('📱 All localStorage keys:', Object.keys(localStorage));
-      console.log('📱 Access token exists:', !!localStorage.getItem('access_token'));
-      console.log('📱 ID token exists:', !!localStorage.getItem('id_token'));
+      const token = localStorage.getItem('id_token');
       
       if (!token) {
         showNotification('Lỗi xác thực!', 'Bạn cần đăng nhập để thực hiện hành động này', 'error');
         return;
       }
+
+      // Use the S3 URL directly from imageUrl field
+      const finalImageUrl = formData.imageUrl?.trim() || '';
 
       let productData;
 
@@ -881,52 +880,44 @@ const ProductFormModal = ({ product, isEditing, onClose, onSuccess, showNotifica
           basePrice: parseFloat(formData.basePrice),
           stock: parseInt(formData.stock),
           category: formData.category.trim() || 'Coffee',
-          imageUrl: formData.imageUrl.trim() || ""
+          imageUrl: finalImageUrl || ""
         };
       } else if (formData.type === 'cake') {
         productData = {
           name: formData.name.trim(), 
           price: parseFloat(formData.price),
           stock: parseInt(formData.stock),
-          imageUrl: formData.imageUrl.trim() || ""
+          imageUrl: finalImageUrl || ""
         };
       } else if (formData.type === 'topping') {
         productData = {
           name: formData.name.trim(), 
           price: parseFloat(formData.price),
           stock: parseInt(formData.stock),
-          imageUrl: formData.imageUrl.trim() || ""
+          imageUrl: finalImageUrl || ""
         };
       }
 
-      // Debug log để kiểm tra dữ liệu gửi
-      console.log('📤 Sending product data:', productData);
-      console.log('🖼️ ImageUrl being sent:', productData.imageUrl);
+      console.log('📤 Sending product data with S3 imageUrl:', productData);
 
       if (isEditing) {
         // Update existing product
         if (formData.type === 'drink') {
-          const response = await drinkService.updateDrink(product.id, productData, token);
-          console.log('✅ Update drink response:', response);
+          await drinkService.updateDrink(product.id, productData, token);
         } else if (formData.type === 'cake') {
-          const response = await cakeService.updateCake(product.id, productData, token);
-          console.log('✅ Update cake response:', response);
+          await cakeService.updateCake(product.id, productData, token);
         } else if (formData.type === 'topping') {
-          const response = await toppingService.updateTopping(product.id, productData, token);
-          console.log('✅ Update topping response:', response);
+          await toppingService.updateTopping(product.id, productData, token);
         }
-        showNotification('Thành công!', 'Sản phẩm đã được cập nhật', 'success');
+        showNotification('Thành công!', 'Sản phẩm đã được cập nhật với hình ảnh mới', 'success');
       } else {
         // Create new product
         if (formData.type === 'drink') {
-          const response = await drinkService.createDrink(productData, token);
-          console.log('✅ Create drink response:', response);
+          await drinkService.createDrink(productData, token);
         } else if (formData.type === 'cake') {
-          const response = await cakeService.createCake(productData, token);
-          console.log('✅ Create cake response:', response);
+          await cakeService.createCake(productData, token);
         } else if (formData.type === 'topping') {
-          const response = await toppingService.createTopping(productData, token);
-          console.log('✅ Create topping response:', response);
+          await toppingService.createTopping(productData, token);
         }
         showNotification('Thành công!', 'Sản phẩm mới đã được thêm vào hệ thống', 'success');
       }
@@ -934,11 +925,7 @@ const ProductFormModal = ({ product, isEditing, onClose, onSuccess, showNotifica
       onSuccess();
     } catch (error) {
       console.error('Error saving product:', error);
-      if (error.response?.data?.message) {
-        showNotification('Lỗi!', error.response.data.message, 'error');
-      } else {
-        showNotification('Lỗi!', 'Có lỗi khi lưu sản phẩm. Vui lòng thử lại sau', 'error');
-      }
+      showNotification('Lỗi!', error.message || 'Có lỗi khi lưu sản phẩm', 'error');
     } finally {
       setLoading(false);
     }
@@ -1056,24 +1043,55 @@ const ProductFormModal = ({ product, isEditing, onClose, onSuccess, showNotifica
             </div>
           )}
 
-          {/* Image URL */}
+          {/* S3 Image URL Section */}
           <div className="form-group">
-            <label>URL hình ảnh:</label>
-            <input
-              type="url"
-              value={formData.imageUrl}
-              onChange={(e) => handleInputChange('imageUrl', e.target.value)}
-              placeholder="https://example.com/image.jpg"
-              className={errors.imageUrl ? 'error' : ''}
-            />
-            {errors.imageUrl && <span className="error-message">{errors.imageUrl}</span>}
+            <label> Image URL:</label>
+            <div className="s3-url-section">
+              
+              {/* Image Preview */}
+              {formData.imageUrl && (
+                <div className="image-preview">
+                  <img 
+                    src={formData.imageUrl} 
+                    alt="S3 Image Preview" 
+                    className="preview-image"
+                    style={{ 
+                      maxWidth: '200px', 
+                      maxHeight: '150px', 
+                      objectFit: 'cover', 
+                      borderRadius: '8px',
+                      border: imageService.isS3Url(formData.imageUrl) ? '2px solid #10B981' : '2px solid #F59E0B'
+                    }}
+                  />
+                  
+                </div>
+              )}
+              
+              {/* S3 URL Input */}
+              <div className="url-input-section">
+                <input
+                  type="url"
+                  value={formData.imageUrl}
+                  onChange={(e) => handleInputChange('imageUrl', e.target.value)}
+                  
+                  className={`s3-url-input ${errors.imageUrl ? 'error' : ''}`}
+                />
+                {errors.imageUrl && <span className="error-message">{errors.imageUrl}</span>}
+              </div>
+              
+              
+            </div>
           </div>
 
           <div className="form-actions">
             <button type="button" onClick={onClose} className="cancel-btn">
               Hủy
             </button>
-            <button type="submit" disabled={loading} className="save-btn">
+            <button 
+              type="submit" 
+              disabled={loading} 
+              className="save-btn"
+            >
               {loading ? 'Đang lưu...' : (isEditing ? 'Cập nhật' : 'Thêm mới')}
             </button>
           </div>
