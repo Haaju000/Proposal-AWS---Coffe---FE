@@ -103,6 +103,48 @@
   padding-left: 1rem; /* Thêm padding để tách khỏi nav */
 }
 
+/* Back to Dashboard Button */
+.back-to-dashboard-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: linear-gradient(135deg, #6B7280 0%, #4B5563 100%);
+  color: white !important;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 25px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 3px 12px rgba(107, 114, 128, 0.25);
+  white-space: nowrap;
+  text-decoration: none;
+  vertical-align: middle;
+  line-height: 1;
+  outline: none;
+}
+
+.back-to-dashboard-btn:hover,
+.back-to-dashboard-btn:focus {
+  background: linear-gradient(135deg, #4B5563 0%, #374151 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 20px rgba(107, 114, 128, 0.35);
+  color: white;
+  text-decoration: none;
+}
+
+.back-to-dashboard-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.back-to-dashboard-btn span {
+  font-size: 13px;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
 /* Shipper Button */
 .shipper-btn {
   display: inline-flex;

@@ -15,6 +15,9 @@ const Header = () => {
   const [showShipperModal, setShowShipperModal] = useState(false);
   const cartMenuRef = useRef(null);
   
+  // Check if we're in admin view mode
+  const isAdminView = new URLSearchParams(location.search).get('admin-view') === 'true';
+  
   const isActive = (path) => {
     if (path === '/') {
       return location.pathname === '/';
@@ -78,21 +81,31 @@ const Header = () => {
         </nav>
         
         <div className="header-actions">
-          {/* Shipper Registration Button */}
-          <button 
-            className="shipper-btn"
-            onClick={() => setShowShipperModal(true)}
-            title="Trở thành đối tác giao hàng"
-          >
-            <span className="shipper-icon">🚚</span>
-            <span className="shipper-text">Trở thành Shipper</span>
-          </button>
+          {isAdminView ? (
+            /* Admin View Mode - Only show back to dashboard button */
+            <Link to="/admin" className="back-to-dashboard-btn">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <path d="M19 12H5M12 19L5 12L12 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              <span>Quay về Dashboard</span>
+            </Link>
+          ) : (
+            <>
+              {/* Shipper Registration Button */}
+              <button 
+                className="shipper-btn"
+                onClick={() => setShowShipperModal(true)}
+                title="Trở thành đối tác giao hàng"
+              >
+                <span className="shipper-icon">🚚</span>
+                <span className="shipper-text">Trở thành Shipper</span>
+              </button>
 
-          {/* Notification Bell - Only show for authenticated users */}
-          {isAuthenticated && user && <NotificationDropdown />}
+              {/* Notification Bell - Only show for authenticated users */}
+              {isAuthenticated && user && <NotificationDropdown />}
 
-          {/* Cart Menu */}
-          <div className="cart-menu" ref={cartMenuRef}>
+              {/* Cart Menu */}
+              <div className="cart-menu" ref={cartMenuRef}>
             <div className="cart-icon" onClick={toggleCartMenu}>
               {cartItemCount > 0 && <span className="cart-count">{cartItemCount}</span>}
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -264,6 +277,8 @@ const Header = () => {
                 <path d="M20 21V19C20 17.9 19.1 17 18 17H6C4.9 17 4 17.9 4 19V21M16 7C16 9.2 14.2 11 12 11S8 9.2 8 7 9.8 3 12 3 16 4.8 16 7Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </Link>
+          )}
+            </>
           )}
         </div>
       </div>

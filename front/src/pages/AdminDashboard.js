@@ -334,7 +334,7 @@ const AdminDashboard = () => {
             {menuItems.find(item => item.id === activeSection)?.label}
           </h1>
           <div className="header-actions">
-            <Link to="/" className="view-site-btn">
+            <Link to="/?admin-view=true" className="view-site-btn">
               <FiGlobe className="btn-icon" size={18} />
               <span>Xem trang web</span>
             </Link>
@@ -2229,26 +2229,7 @@ const InventoryContent = ({ showNotification }) => {
 
   return (
     <div className="inventory-content">
-      {/* Header */}
-      <div className="content-header">
-        <div className="header-title">
-          <FiBox size={24} />
-          <h2>Quản lý Kho hàng</h2>
-          {stockAlerts && (
-            <span className={`alerts-badge ${stockAlerts.critical > 0 ? 'critical' : stockAlerts.warnings > 0 ? 'warning' : 'good'}`}>
-              {stockAlerts.totalAlerts > 0 ? `${stockAlerts.totalAlerts} cảnh báo` : 'Tốt'}
-            </span>
-          )}
-        </div>
-        
-        <div className="header-actions">
-          <button onClick={loadInventoryData} className="refresh-btn">
-            <FiGlobe size={16} />
-            Làm mới
-          </button>
-        </div>
-      </div>
-
+      
       {/* Inventory Stats Grid */}
       {inventoryData && (
         <div className="inventory-stats-grid">
