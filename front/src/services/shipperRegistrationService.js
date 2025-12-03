@@ -1,7 +1,8 @@
 import axios from 'axios';
 import authService from './authService';
+import { ENV_CONFIG } from '../config/environment';
 
-const API_BASE_URL = 'http://localhost:5144';
+const API_BASE_URL = ENV_CONFIG.getApiBaseUrl().replace('/api', '');
 
 // Create axios instance
 const registrationAPI = axios.create({

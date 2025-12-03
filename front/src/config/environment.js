@@ -8,9 +8,9 @@ export const ENV_CONFIG = {
       AUTH_TYPE: 'custom'
     },
     PRODUCTION: {
-      USE_AMPLIFY_AUTH: true,
-      API_BASE_URL: 'http://localhost:5144/api', // Fallback to localhost for now
-      AUTH_TYPE: 'amplify'
+      USE_AMPLIFY_AUTH: false,
+      API_BASE_URL: 'http://fixenv-env.eba-vgperhwx.ap-southeast-1.elasticbeanstalk.com/api', // HTTP (backend chưa có SSL)
+      AUTH_TYPE: 'custom'
     }
   },
   

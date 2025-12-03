@@ -1,6 +1,7 @@
 import axios from 'axios';
+import { ENV_CONFIG } from '../config/environment';
 
-const API_BASE_URL = 'http://localhost:5144'; // Khớp với Swagger backend
+const API_BASE_URL = ENV_CONFIG.getApiBaseUrl().replace('/api', ''); // Khớp với Swagger backend
 
 const drinkService = {
   // GET /api/drink - Lấy tất cả đồ uống

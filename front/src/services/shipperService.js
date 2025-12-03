@@ -1,7 +1,8 @@
 import axios from 'axios';
 import authService from './authService';
+import { ENV_CONFIG } from '../config/environment';
 
-const API_BASE_URL = 'http://localhost:5144';
+const API_BASE_URL = ENV_CONFIG.getApiBaseUrl().replace('/api', '');
 
 // Create axios instance với interceptor để tự động thêm token
 const shipperAPI = axios.create({
@@ -115,9 +116,7 @@ const shipperService = {
   lockShipper: async (userId) => {
     try {
       console.log(`🔒 Locking shipper with ID: ${userId}`);
-      const response = await shipperAPI.put(`/api/Admin/shipper/${userId}/lock`, {
-        unlock: false  // false = lock, true = unlock
-      });
+      const response = await shipperAPI.put(`/api/Admin/shipper/${userId}/lock`);
       console.log('✅ Shipper locked successfully:', response.data);
       return response.data;
     } catch (error) {
@@ -125,28 +124,6 @@ const shipperService = {
       
       if (error.response?.status === 400) {
         throw new Error('Yêu cầu không hợp lệ. Shipper có thể đã bị khóa.');
-      } else if (error.response?.status === 404) {
-        throw new Error('Không tìm thấy shipper.');
-      }
-      
-      throw error;
-    }
-  },
-
-  // PUT /api/Admin/shipper/{userId}/lock - Mở khóa tài khoản shipper
-  unlockShipper: async (userId) => {
-    try {
-      console.log(`🔓 Unlocking shipper with ID: ${userId}`);
-      const response = await shipperAPI.put(`/api/Admin/shipper/${userId}/lock`, {
-        unlock: true  // true = unlock, false = lock
-      });
-      console.log('✅ Shipper unlocked successfully:', response.data);
-      return response.data;
-    } catch (error) {
-      console.error(`❌ Error unlocking shipper ${userId}:`, error);
-      
-      if (error.response?.status === 400) {
-        throw new Error('Yêu cầu không hợp lệ. Shipper có thể đã được mở khóa.');
       } else if (error.response?.status === 404) {
         throw new Error('Không tìm thấy shipper.');
       }

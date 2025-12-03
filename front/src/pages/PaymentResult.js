@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import paymentService from '../services/paymentService';
+import { ENV_CONFIG } from '../config/environment';
 import '../css/PaymentResult.css';
 
 const PaymentResult = () => {
@@ -546,7 +547,7 @@ const PaymentResult = () => {
                             
                             try {
                                 console.log('📋 Fetching actual order status from backend...');
-                                const orderResponse = await fetch(`http://localhost:5144/api/Order/${orderId}`, {
+                                const orderResponse = await fetch(`${ENV_CONFIG.getApiBaseUrl()}/Order/${orderId}`, {
                                     headers: {
                                         'Authorization': `Bearer ${localStorage.getItem('id_token') || localStorage.getItem('access_token') || localStorage.getItem('local_token')}`
                                     }

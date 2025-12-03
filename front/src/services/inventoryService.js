@@ -1,6 +1,7 @@
 import axios from 'axios';
+import { ENV_CONFIG } from '../config/environment';
 
-const API_BASE_URL = 'http://localhost:5144';
+const API_BASE_URL = ENV_CONFIG.getApiBaseUrl().replace('/api', '');
 
 const inventoryService = {
   // GET /api/inventory/overview - Tổng quan kho hàng

@@ -16,6 +16,7 @@ import Testimonials from './components/Testimonials';
 import Footer from './components/Footer';
 import ScrollToTop from './components/ScrollToTop';
 import Confirmation from './pages/Confirmation';
+import MixedContentTest from './components/MixedContentTest'; // ⚠️ Debug only
 
 // Import pages
 import Menu from './pages/Menu';
@@ -118,6 +119,9 @@ function App() {
           <Route path="/payment-success" element={<PaymentResult />} />
           <Route path="/payment-failed" element={<PaymentResult />} />
             </Routes>
+            
+            {/* ⚠️ Mixed Content Test - Only for debugging */}
+            {process.env.NODE_ENV === 'development' && <MixedContentTest />}
           </Router>
         </NotificationProvider>
       </CartProvider>

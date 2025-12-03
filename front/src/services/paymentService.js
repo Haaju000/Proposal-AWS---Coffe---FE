@@ -1,7 +1,8 @@
 import axios from 'axios';
+import { ENV_CONFIG } from '../config/environment';
 
 // API base URL - match với Swagger backend
-const API_BASE_URL = 'http://localhost:5144/api';
+const API_BASE_URL = ENV_CONFIG.getApiBaseUrl();
 
 // Create axios instance
 const apiClient = axios.create({

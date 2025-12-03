@@ -1,7 +1,8 @@
 import axios from 'axios';
 import authService from './authService';
+import { ENV_CONFIG } from '../config/environment';
 
-const API_BASE_URL = 'http://localhost:5144';
+const API_BASE_URL = ENV_CONFIG.getApiBaseUrl().replace('/api', '');
 
 // Create axios instance với interceptor để tự động thêm token
 const dashboardAPI = axios.create({
