@@ -36,7 +36,7 @@ const shipperRegistrationService = {
   submitApplication: async (applicationData) => {
     try {
       console.log('🚚 Submitting shipper registration...', applicationData);
-      console.log('🔗 Request URL:', `${API_BASE_URL}/api/ShipperRegistration/register`);
+      console.log('🔗 Request URL:', `${getBaseURL()}/api/ShipperRegistration/register`);
       console.log('🔑 ID Token:', authService.getIdToken() ? 'Present' : 'Missing');
       
       const response = await registrationAPI.post('/api/ShipperRegistration/register', applicationData);

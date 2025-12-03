@@ -154,7 +154,7 @@ const authService = {
   // Register function - sử dụng query parameters
   register: async (username, password, role = 'User') => {
     try {
-      console.log('🚀 Sending register request to:', API_BASE_URL);
+      console.log('🚀 Sending register request to:', getBaseURL());
       console.log('📝 Register data:', { username, role });
       
       // Gửi dưới dạng query parameters

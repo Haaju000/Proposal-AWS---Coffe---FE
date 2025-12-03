@@ -36,7 +36,7 @@ const shipperService = {
   getPendingShippers: async () => {
     try {
       console.log('🔍 Fetching pending shippers...');
-      console.log('🔗 Request URL:', `${API_BASE_URL}/api/Admin/shippers/pending`);
+      console.log('🔗 Request URL:', `${getBaseURL()}/api/Admin/shippers/pending`);
       console.log('🔑 ID Token:', authService.getIdToken() ? 'Present' : 'Missing');
       
       const response = await shipperAPI.get('/api/Admin/shippers/pending');

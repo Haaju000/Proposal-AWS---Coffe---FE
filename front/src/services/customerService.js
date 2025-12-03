@@ -36,7 +36,7 @@ const customerService = {
   getAllCustomers: async () => {
     try {
       console.log('🔍 Fetching all customers...');
-      console.log('🔗 Request URL:', `${API_BASE_URL}/api/Customer`);
+      console.log('🔗 Request URL:', `${getBaseURL()}/api/Customer`);
       console.log('🔑 ID Token:', authService.getIdToken() ? 'Present' : 'Missing');
       
       const response = await customerAPI.get('/api/Customer');
