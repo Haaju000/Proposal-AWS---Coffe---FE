@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ENV_CONFIG } from './config/environment';
+import { ENV_CONFIG } from '../config/environment';
 
 /**
  * ⚠️ Mixed Content Test Component
