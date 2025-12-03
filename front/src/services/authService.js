@@ -24,10 +24,6 @@ apiClient.interceptors.request.use(
       config.baseURL = getBaseURL();
     }
     
-    // Debug: Log full URL
-    const fullUrl = config.baseURL + config.url;
-    console.log('🌐 AuthService request:', config.method?.toUpperCase(), fullUrl);
-    
     // Check for both Cognito access_token and local_token
     const accessToken = localStorage.getItem('access_token');
     const localToken = localStorage.getItem('local_token');
@@ -49,8 +45,6 @@ apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
     if (error.response?.status === 401) {
-      // Token expired, logout user
-      console.warn('Token expired, logging out...');
       authService.logout();
       window.location.href = '/login';
     }
@@ -69,13 +63,8 @@ const authService = {
         password: password
       });
       
-      console.log('Login response:', response.data);
-      console.log('🔍 Response authType:', response.data.authType);
-      console.log('🔍 Response keys:', Object.keys(response.data));
-      
       // Check authType to determine how to handle response
       if (response.data.authType === 'Local') {
-        console.log('🔐 Processing Local Auth (Shipper)');
         // Local Auth (Shipper) - direct token and user info
         localStorage.setItem('local_token', response.data.token);
         
@@ -90,7 +79,6 @@ const authService = {
         };
         localStorage.setItem('user', JSON.stringify(userData));
       } else {
-        console.log('🔐 Processing Cognito Auth (User/Admin)');
         // Cognito Auth (User/Admin) - Lưu các Cognito tokens
         if (response.data.accessToken) {
           localStorage.setItem('access_token', response.data.accessToken);
@@ -99,31 +87,29 @@ const authService = {
           
           // Parse user info từ ID token (JWT payload)
           const userInfo = parseJWTPayload(response.data.idToken);
-          console.log('📋 Parsed JWT payload:', userInfo);
-          console.log('⏰ Token exp:', userInfo.exp, 'Current time:', Math.floor(Date.now() / 1000));
           
+          // ⚠️ ƯU TIÊN dùng role từ backend (DynamoDB) thay vì JWT
           const userData = { 
             username: username, // Username from form
-            userId: userInfo.sub, // Cognito User ID (UserSub)
-            cognitoUsername: userInfo['cognito:username'] || username, // Cognito username
+            userId: response.data.userId || userInfo.sub, // Ưu tiên backend userId
+            cognitoUsername: userInfo['cognito:username'] || username,
             email: userInfo.email || '',
-            role: userInfo['custom:role'] || 'User', // Role từ Cognito custom attribute
+            role: response.data.role || userInfo['custom:role'] || 'User', // ⭐ Backend role ưu tiên
             phone: userInfo.phone_number || '',
             emailVerified: userInfo.email_verified || false,
             authType: 'Cognito',
-            rewardPoints: 0, // Sẽ được load từ DynamoDB
-            voucherCount: 0, // Sẽ được load từ DynamoDB
+            rewardPoints: 0,
+            voucherCount: 0,
             iat: userInfo.iat,
             exp: userInfo.exp
           };
-          console.log('💾 Saving userData:', userData);
           localStorage.setItem('user', JSON.stringify(userData));
 
           // Fetch thêm thông tin user từ DynamoDB (nếu cần)
           try {
             await authService.loadUserProfile(userData.userId);
           } catch (profileError) {
-            console.warn('Could not load user profile from DynamoDB:', profileError);
+            // Ignore profile load errors
           }
         }
       }
@@ -162,17 +148,11 @@ const authService = {
   // Register function - sử dụng query parameters
   register: async (username, password, role = 'User') => {
     try {
-      console.log('🚀 Sending register request to:', getBaseURL());
-      console.log('📝 Register data:', { username, role });
-      
-      // Gửi dưới dạng query parameters
       const response = await apiClient.post('/Auth/register', { 
             username: username, 
             password: password, 
-            role: role // Đảm bảo role được gửi là string
+            role: role
         });
-      
-      console.log('✅ Register response:', response.data);
       
       return {
         success: true,
@@ -182,10 +162,6 @@ const authService = {
         username: username
       };
     } catch (error) {
-      console.error('❌ Register error:', error);
-      console.error('❌ Error response data:', error.response?.data);
-      console.error('❌ Error status:', error.response?.status);
-      
       let errorMessage = 'Đăng ký thất bại. Vui lòng thử lại.';
       
       // Xử lý lỗi từ backend
@@ -310,36 +286,23 @@ const authService = {
       const user = authService.getCurrentUser();
       const accessToken = localStorage.getItem('access_token');
       
-      console.log('🚪 Logout called for user:', user);
-      console.log('🔑 Access token exists:', !!accessToken);
-      console.log('🔍 User authType:', user?.authType);
-      
       // Nếu là Cognito user (User/Admin), gọi API logout
       if (accessToken && user?.authType === 'Cognito') {
-        console.log('📞 Calling Cognito logout API...');
         await apiClient.post('/Auth/logout', {}, {
           headers: {
             'Authorization': `Bearer ${accessToken}`
           }
         });
-        console.log('✅ Cognito logout API success');
-      } else {
-        console.log('⏭️ Skipping logout API call (Local auth or no token)');
       }
-      // Nếu là Shipper (Local auth), không cần gọi API logout
     } catch (error) {
-      console.error('❌ Logout API error:', error);
       // Vẫn logout ở frontend dù API fail
     } finally {
       // Clear tất cả tokens và user data
-      console.log('🧹 Clearing localStorage...');
       localStorage.removeItem('access_token');
       localStorage.removeItem('id_token');
       localStorage.removeItem('refresh_token');
       localStorage.removeItem('local_token');
       localStorage.removeItem('user');
-      
-      console.log('🚪 User logged out successfully');
       
       // Redirect to login page
       window.location.href = '/login';
@@ -363,7 +326,6 @@ const authService = {
       // For regular users: need access_token and check expiry
       const accessToken = localStorage.getItem('access_token');
       if (!accessToken) {
-        console.warn('No access token found');
         return null;
       }
       
@@ -371,24 +333,15 @@ const authService = {
       if (userData.exp) {
         const now = Date.now();
         const expMillis = userData.exp * 1000;
-        console.log('Token expiry check:', {
-          now: new Date(now).toISOString(),
-          exp: new Date(expMillis).toISOString(),
-          expired: now >= expMillis
-        });
         
         if (now >= expMillis) {
-          console.warn('Token expired, logging out...');
           authService.logout();
           return null;
         }
-      } else {
-        console.warn('No exp field in userData, skipping expiry check');
       }
       
       return userData;
     } catch (error) {
-      console.error('Error parsing user data:', error);
       return null;
     }
   },

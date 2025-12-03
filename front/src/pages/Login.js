@@ -51,26 +51,18 @@ const Login = () => {
       );
 
       if (result.success) {
-        console.log('🔍 Login result:', result);
-        console.log('👤 User role:', result.user?.role);
-        console.log('🔐 Tokens:', result.tokens);
-        
         // Update auth context
         await login(result.user, result.tokens);
         
         // Navigate based on user role with delay to ensure state update
         const userRole = result.user?.role;
-        console.log('🎯 Navigating based on role:', userRole);
         
         setTimeout(() => {
           if (userRole === 'Admin') {
-            console.log('➡️ Redirecting to admin dashboard');
             navigate('/admin', { replace: true });
           } else if (userRole === 'Shipper') {
-            console.log('➡️ Redirecting to shipper dashboard');  
             navigate('/shipper', { replace: true });
           } else {
-            console.log('➡️ Redirecting to home');
             navigate('/', { replace: true });
           }
         }, 300);

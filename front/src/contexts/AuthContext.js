@@ -37,11 +37,7 @@ export const AuthProvider = ({ children }) => {
 
   // Login function - updated for Cognito tokens
   const login = async (userData, tokens) => {
-    console.log('🔐 AuthContext: Setting user data:', userData);
-    console.log('🔐 AuthContext: User role:', userData?.role);
-    console.log('🔐 AuthContext: Auth type:', userData?.authType);
     setUser(userData);
-    console.log('✅ AuthContext: User state updated');
     // Tokens are already saved in authService.login()
   };
 
