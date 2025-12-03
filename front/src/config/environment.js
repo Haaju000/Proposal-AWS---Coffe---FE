@@ -9,7 +9,7 @@ export const ENV_CONFIG = {
     },
     PRODUCTION: {
       USE_AMPLIFY_AUTH: false,
-      API_BASE_URL: 'https://unnecessary-treatment-rejected-animal.trycloudflare.com', // HTTP (backend chưa có SSL)
+      API_BASE_URL: process.env.REACT_APP_API_URL,
       AUTH_TYPE: 'custom'
     }
   },
