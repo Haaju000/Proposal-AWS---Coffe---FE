@@ -24,6 +24,10 @@ apiClient.interceptors.request.use(
       config.baseURL = getBaseURL();
     }
     
+    // Debug: Log full URL
+    const fullUrl = config.baseURL + config.url;
+    console.log('🌐 AuthService request:', config.method?.toUpperCase(), fullUrl);
+    
     // Check for both Cognito access_token and local_token
     const accessToken = localStorage.getItem('access_token');
     const localToken = localStorage.getItem('local_token');
@@ -95,6 +99,9 @@ const authService = {
           
           // Parse user info từ ID token (JWT payload)
           const userInfo = parseJWTPayload(response.data.idToken);
+          console.log('📋 Parsed JWT payload:', userInfo);
+          console.log('⏰ Token exp:', userInfo.exp, 'Current time:', Math.floor(Date.now() / 1000));
+          
           const userData = { 
             username: username, // Username from form
             userId: userInfo.sub, // Cognito User ID (UserSub)
@@ -109,6 +116,7 @@ const authService = {
             iat: userInfo.iat,
             exp: userInfo.exp
           };
+          console.log('💾 Saving userData:', userData);
           localStorage.setItem('user', JSON.stringify(userData));
 
           // Fetch thêm thông tin user từ DynamoDB (nếu cần)
@@ -354,13 +362,28 @@ const authService = {
       
       // For regular users: need access_token and check expiry
       const accessToken = localStorage.getItem('access_token');
-      if (!accessToken) return null;
+      if (!accessToken) {
+        console.warn('No access token found');
+        return null;
+      }
       
       // Kiểm tra token expiry (only for Cognito tokens)
-      if (userData.exp && Date.now() >= userData.exp * 1000) {
-        console.warn('Token expired');
-        authService.logout();
-        return null;
+      if (userData.exp) {
+        const now = Date.now();
+        const expMillis = userData.exp * 1000;
+        console.log('Token expiry check:', {
+          now: new Date(now).toISOString(),
+          exp: new Date(expMillis).toISOString(),
+          expired: now >= expMillis
+        });
+        
+        if (now >= expMillis) {
+          console.warn('Token expired, logging out...');
+          authService.logout();
+          return null;
+        }
+      } else {
+        console.warn('No exp field in userData, skipping expiry check');
       }
       
       return userData;
