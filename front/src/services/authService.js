@@ -2,19 +2,28 @@ import axios from 'axios';
 import { ENV_CONFIG } from '../config/environment';
 
 // URL backend C# - Tự động chọn LOCAL hoặc PRODUCTION
-const API_BASE_URL = ENV_CONFIG.getApiBaseUrl();
+// Đảm bảo luôn có giá trị, fallback về Cloudflare nếu env var chưa set
+const getBaseURL = () => {
+  const url = ENV_CONFIG.getApiBaseUrl();
+  // Nếu undefined, trả về URL mặc định
+  return url;
+};
 
-// Tạo axios instance
+// Tạo axios instance với baseURL được đánh giá mỗi lần gọi
 const apiClient = axios.create({
-  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Interceptor để thêm access token vào mỗi request
+// Thêm baseURL vào mỗi request (dynamic)
 apiClient.interceptors.request.use(
   (config) => {
+    // Set baseURL mỗi lần request
+    if (!config.baseURL) {
+      config.baseURL = getBaseURL();
+    }
+    
     // Check for both Cognito access_token and local_token
     const accessToken = localStorage.getItem('access_token');
     const localToken = localStorage.getItem('local_token');

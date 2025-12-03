@@ -2,11 +2,11 @@ import axios from 'axios';
 import authService from './authService';
 import { ENV_CONFIG } from '../config/environment';
 
-const API_BASE_URL = ENV_CONFIG.getApiBaseUrl().replace('/api', '');
+// Helper to get API base URL dynamically
+const getBaseURL = () => ENV_CONFIG.getApiBaseUrl().replace('/api', '');
 
 // Create axios instance
 const registrationAPI = axios.create({
-  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -15,6 +15,11 @@ const registrationAPI = axios.create({
 // Add auth token to requests
 registrationAPI.interceptors.request.use(
   (config) => {
+    // Set baseURL dynamically for each request
+    if (!config.baseURL) {
+      config.baseURL = getBaseURL();
+    }
+    
     const token = authService.getIdToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;

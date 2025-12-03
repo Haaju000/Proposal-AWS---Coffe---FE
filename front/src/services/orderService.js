@@ -1,23 +1,25 @@
 import axios from 'axios';
 import { ENV_CONFIG } from '../config/environment';
 
-// API base URL - match với Swagger backend
-const API_BASE_URL = ENV_CONFIG.getApiBaseUrl();
+// Helper to get API base URL dynamically
+const getBaseURL = () => ENV_CONFIG.getApiBaseUrl();
 
 // Create axios instance
 const apiClient = axios.create({
-  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
   timeout: 10000, // 10 second timeout
 });
 
-console.log('✅ OrderService initialized with base URL:', API_BASE_URL);
-
 // Add token interceptor - match authService priority
 apiClient.interceptors.request.use(
   (config) => {
+    // Set baseURL dynamically for each request
+    if (!config.baseURL) {
+      config.baseURL = getBaseURL();
+    }
+    
     // Priority: id_token > access_token > local_token (same as authService)
     const idToken = localStorage.getItem('id_token');
     const accessToken = localStorage.getItem('access_token');
