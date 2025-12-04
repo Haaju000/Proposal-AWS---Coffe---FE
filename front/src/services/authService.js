@@ -1,16 +1,8 @@
-import axios from 'axios';
+﻿import axios from 'axios';
 import { ENV_CONFIG } from '../config/environment';
 
 // Helper to get API base URL dynamically
-const getBaseURL = () => {
-    const url = ENV_CONFIG.getApiBaseUrl();
-    // 💡 SỬA ĐỔI 1: Nếu URL base kết thúc bằng '/api' (như trong env Amplify), loại bỏ nó.
-    // Điều này tránh lỗi 404 Not Found do URL bị trùng: .../api/api/Auth/login
-    if (url && url.endsWith('/api')) {
-        return url.substring(0, url.length - 4);
-    }
-    return url;
-};
+const API_BASE_URL = ENV_CONFIG.getApiBaseUrl().replace('/api', '');
 
 // Tạo axios instance với baseURL được đánh giá mỗi lần gọi
 const apiClient = axios.create({
@@ -61,16 +53,12 @@ apiClient.interceptors.response.use(
 // Auth service functions
 const authService = {
   // Login function - gửi body JSON như Swagger API expect
-  login: async (username, password) => {
-    try {
-      // Gửi dưới dạng JSON body như Swagger API expect
-      // 💡 SỬA ĐỔI 1: Thêm lại tiền tố '/api' vì nó đã bị loại bỏ khỏi Base URL
-      const response = await apiClient.post('/api/Auth/login', {
-        username: username,
-        password: password
-      });
-      
-      // Check authType to determine how to handle response
+  login: async (username, password) => {
+    try {
+      const response = await axios.post(`${API_BASE_URL}/api/Auth/login`, {
+        username: username,
+        password: password
+      });      // Check authType to determine how to handle response
       if (response.data.authType === 'Local') {
         // Local Auth (Shipper) - direct token and user info
         localStorage.setItem('local_token', response.data.token);
@@ -156,7 +144,7 @@ const authService = {
   register: async (username, password, role = 'User') => {
     try {
       // 💡 SỬA ĐỔI 1: Thêm lại tiền tố '/api' vì nó đã bị loại bỏ khỏi Base URL
-      const response = await apiClient.post('/api/Auth/register', { 
+      const response = await axios.post(`${API_BASE_URL}/api/Auth/register`, {
             username: username, 
             password: password, 
             role: role
@@ -217,7 +205,7 @@ const authService = {
   confirmSignUp: async (username, confirmationCode) => {
     try {
       // 💡 SỬA ĐỔI 1: Thêm lại tiền tố '/api' vì nó đã bị loại bỏ khỏi Base URL
-      const response = await apiClient.post(`/api/Auth/confirm`, {
+      const response = await axios.post(`${API_BASE_URL}/api/Auth/confirm`, {
       username: username, // Gửi trong body
       confirmationCode: confirmationCode // Gửi trong body
     });
@@ -251,7 +239,7 @@ const authService = {
   resendConfirmationCode: async (username) => {
     try {
       // 💡 SỬA ĐỔI 1: Thêm lại tiền tố '/api' vì nó đã bị loại bỏ khỏi Base URL
-      const response = await apiClient.post(`/api/Auth/resend`, { 
+      const response = await axios.post(`${API_BASE_URL}/api/Auth/resend`, { 
             username: username
       });
       return {
@@ -299,7 +287,7 @@ const authService = {
       // Nếu là Cognito user (User/Admin), gọi API logout
       if (accessToken && user?.authType === 'Cognito') {
         // 💡 SỬA ĐỔI 1: Thêm lại tiền tố '/api' vì nó đã bị loại bỏ khỏi Base URL
-        await apiClient.post('/api/Auth/logout', {}, {
+        await axios.post(`${API_BASE_URL}/api/Auth/logout`, {}, {
           headers: {
             // 💡 Lưu ý: Logout API thường cần ACCESS TOKEN
             'Authorization': `Bearer ${accessToken}`
