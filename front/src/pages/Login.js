@@ -44,28 +44,55 @@ const Login = () => {
         throw { message: 'Vui lòng nhập mật khẩu.' };
       }
 
+      console.log('Starting login process...'); // Debug log
+
       // Call login (handles both Local Auth and Cognito)
       const result = await authService.login(
         formData.username.trim(),
         formData.password
       );
 
+      console.log('Login result:', result); // Debug log
+
       if (result.success) {
-        // Update auth context
+        console.log('Login successful, updating context...'); // Debug log
+        
+        // Update auth context FIRST
         await login(result.user, result.tokens);
         
-        // Navigate based on user role with delay to ensure state update
-        const userRole = result.user?.role;
+        console.log('Context updated, preparing navigation...'); // Debug log
         
+        // Get user role for navigation
+        const userRole = result.user?.role;
+        console.log('User role:', userRole); // Debug log
+        
+        // ✅ SỬA: Increase delay và sử dụng replace navigation với error handling
         setTimeout(() => {
-          if (userRole === 'Admin') {
-            navigate('/admin', { replace: true });
-          } else if (userRole === 'Shipper') {
-            navigate('/shipper', { replace: true });
-          } else {
-            navigate('/', { replace: true });
+          try {
+            console.log('Navigating to appropriate route...'); // Debug log
+            
+            if (userRole === 'Admin') {
+              console.log('Navigating to admin dashboard');
+              navigate('/admin', { replace: true });
+            } else if (userRole === 'Shipper') {
+              console.log('Navigating to shipper dashboard');
+              navigate('/shipper', { replace: true });
+            } else {
+              console.log('Navigating to home page');
+              navigate('/', { replace: true });
+            }
+          } catch (navError) {
+            console.error('Navigation error:', navError);
+            // Fallback: force reload to appropriate page
+            if (userRole === 'Admin') {
+              window.location.replace('/admin');
+            } else if (userRole === 'Shipper') {
+              window.location.replace('/shipper');
+            } else {
+              window.location.replace('/');
+            }
           }
-        }, 300);
+        }, 500); // Tăng delay lên 500ms
       }
     } catch (error) {
       console.error('Login error:', error);

@@ -38,25 +38,40 @@ apiClient.interceptors.request.use(
 
 // Interceptor để xử lý response errors
 apiClient.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    if (error.response?.status === 401) {
-      authService.logout();
-      window.location.href = '/login';
-    }
-    return Promise.reject(error);
-  }
-);
-
-// Auth service functions
+  (response) => response,
+  async (error) => {
+    if (error.response?.status === 401) {
+      console.log('401 error, clearing storage...');
+      
+      // Clear storage immediately
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('id_token');
+      localStorage.removeItem('refresh_token');
+      localStorage.removeItem('local_token');
+      localStorage.removeItem('user');
+      
+      // Only redirect if not already on login page
+      if (!window.location.pathname.includes('/login')) {
+        window.location.replace('/login');
+      }
+    }
+    return Promise.reject(error);
+  }
+);// Auth service functions
 const authService = {
   // Login function - gửi body JSON như Swagger API expect
   login: async (username, password) => {
     try {
-      const response = await axios.post(`${API_BASE_URL}/api/Auth/login`, {
+      console.log('Login attempt:', { username, apiUrl: `${API_BASE_URL}/api/Auth/login` });
+      
+      const response = await apiClient.post(`${API_BASE_URL}/api/Auth/login`, {
         username: username,
         password: password
-      });      // Check authType to determine how to handle response
+      });
+      
+      console.log('Login response:', { authType: response.data.authType, role: response.data.role });
+      
+      // Check authType to determine how to handle response
       if (response.data.authType === 'Local') {
         // Local Auth (Shipper) - direct token and user info
         localStorage.setItem('local_token', response.data.token);
@@ -142,7 +157,7 @@ const authService = {
   register: async (username, password, role = 'User') => {
     try {
       // 💡 SỬA ĐỔI 1: Thêm lại tiền tố '/api' vì nó đã bị loại bỏ khỏi Base URL
-      const response = await axios.post(`${API_BASE_URL}/api/Auth/register`, {
+      const response = await apiClient.post(`${API_BASE_URL}/api/Auth/register`, {
             username: username, 
             password: password, 
             role: role
@@ -203,7 +218,7 @@ const authService = {
   confirmSignUp: async (username, confirmationCode) => {
     try {
       // 💡 SỬA ĐỔI 1: Thêm lại tiền tố '/api' vì nó đã bị loại bỏ khỏi Base URL
-      const response = await axios.post(`${API_BASE_URL}/api/Auth/confirm`, {
+      const response = await apiClient.post(`${API_BASE_URL}/api/Auth/confirm`, {
       username: username, // Gửi trong body
       confirmationCode: confirmationCode // Gửi trong body
     });
@@ -237,7 +252,7 @@ const authService = {
   resendConfirmationCode: async (username) => {
     try {
       // 💡 SỬA ĐỔI 1: Thêm lại tiền tố '/api' vì nó đã bị loại bỏ khỏi Base URL
-      const response = await axios.post(`${API_BASE_URL}/api/Auth/resend`, { 
+      const response = await apiClient.post(`${API_BASE_URL}/api/Auth/resend`, { 
             username: username
       });
       return {
@@ -276,38 +291,34 @@ const authService = {
     }
   },
 
-  // Logout function - hỗ trợ cả Cognito và Local auth
-  logout: async () => {
-    try {
-      const user = authService.getCurrentUser();
-      const accessToken = localStorage.getItem('access_token');
-      
-      // Nếu là Cognito user (User/Admin), gọi API logout
-      if (accessToken && user?.authType === 'Cognito') {
-        // 💡 SỬA ĐỔI 1: Thêm lại tiền tố '/api' vì nó đã bị loại bỏ khỏi Base URL
-        await axios.post(`${API_BASE_URL}/api/Auth/logout`, {}, {
-          headers: {
-            // 💡 Lưu ý: Logout API thường cần ACCESS TOKEN
-            'Authorization': `Bearer ${accessToken}`
-          }
-        });
-      }
-    } catch (error) {
-      // Vẫn logout ở frontend dù API fail
-    } finally {
-      // Clear tất cả tokens và user data
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('id_token');
-      localStorage.removeItem('refresh_token');
-      localStorage.removeItem('local_token');
-      localStorage.removeItem('user');
-      
-      // Redirect to login page
-      window.location.href = '/login';
-    }
-  },
-
-  // Get current user
+  // Logout function - hỗ trợ cả Cognito và Local auth
+  logout: async () => {
+    try {
+      const user = authService.getCurrentUser();
+      const accessToken = localStorage.getItem('access_token');
+      
+      // Nếu là Cognito user (User/Admin), gọi API logout
+      if (accessToken && user?.authType === 'Cognito') {
+        await apiClient.post(`${API_BASE_URL}/api/Auth/logout`, {}, {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Logout API error:', error);
+    } finally {
+      // Clear tất cả tokens và user data
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('id_token');
+      localStorage.removeItem('refresh_token');
+      localStorage.removeItem('local_token');
+      localStorage.removeItem('user');
+      
+      // Safe redirect to login page
+      window.location.replace('/login');
+    }
+  },  // Get current user
   getCurrentUser: () => {
     try {
       const user = localStorage.getItem('user');
@@ -327,18 +338,21 @@ const authService = {
         return null;
       }
       
-      // Kiểm tra token expiry (only for Cognito tokens)
-      if (userData.exp) {
-        const now = Date.now();
-        const expMillis = userData.exp * 1000;
-        
-        if (now >= expMillis) {
-          authService.logout();
-          return null;
-        }
-      }
-      
-      return userData;
+      // Kiểm tra token expiry (only for Cognito tokens)
+      if (userData.exp) {
+        const now = Date.now();
+        const expMillis = userData.exp * 1000;
+        
+        if (now >= expMillis) {
+          console.log('Token expired, clearing storage...');
+          // Clear expired tokens immediately without API call to avoid recursive calls
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('id_token');
+          localStorage.removeItem('refresh_token');
+          localStorage.removeItem('user');
+          return null;
+        }
+      }      return userData;
     } catch (error) {
       return null;
     }
