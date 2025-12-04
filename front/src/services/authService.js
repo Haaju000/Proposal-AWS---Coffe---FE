@@ -13,13 +13,11 @@ const apiClient = axios.create({
 
 // Thêm baseURL vào mỗi request (dynamic)
 apiClient.interceptors.request.use(
-  (config) => {
-    // Set baseURL mỗi lần request
-    if (!config.baseURL) {
-      config.baseURL = getBaseURL();
-    }
-    
-    // 💡 SỬA ĐỔI 2: Ưu tiên gửi ID Token (Cognito) hoặc Local Token (Shipper)
+  (config) => {
+    // Set baseURL mỗi lần request
+    if (!config.baseURL) {
+      config.baseURL = API_BASE_URL;
+    }    // 💡 SỬA ĐỔI 2: Ưu tiên gửi ID Token (Cognito) hoặc Local Token (Shipper)
     // ID Token cần thiết cho việc xác thực và lấy thông tin role/claims.
     const idToken = localStorage.getItem('id_token');
     const localToken = localStorage.getItem('local_token');
