@@ -25,11 +25,11 @@ apiClient.interceptors.request.use(
     }
     
     // Check for both Cognito access_token and local_token
-    const accessToken = localStorage.getItem('access_token');
+    const cognitoToken = localStorage.getItem('id_token');
     const localToken = localStorage.getItem('local_token');
     
-    if (accessToken) {
-      config.headers.Authorization = `Bearer ${accessToken}`;
+    if (cognitoToken) {
+      config.headers.Authorization = `Bearer ${cognitoToken}`;
     } else if (localToken) {
       config.headers.Authorization = `Bearer ${localToken}`;
     }
