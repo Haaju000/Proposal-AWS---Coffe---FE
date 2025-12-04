@@ -20,13 +20,34 @@ export const AuthProvider = ({ children }) => {
     const checkAuth = async () => {
       try {
         const currentUser = authService.getCurrentUser();
+        console.log('AuthContext checkAuth - currentUser:', currentUser); // Debug log
+        
         if (currentUser && authService.isAuthenticated()) {
+          console.log('User authenticated, setting user state'); // Debug log
           setUser(currentUser);
+        } else {
+          console.log('No valid authentication found'); // Debug log
+          setUser(null);
+          
+          // ✅ CHỈ clear storage, KHÔNG auto-logout (để tránh redirect loop)
+          if (currentUser && !authService.isAuthenticated()) {
+            console.log('Invalid token detected, clearing storage only');
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('id_token');
+            localStorage.removeItem('refresh_token');
+            localStorage.removeItem('local_token');
+            localStorage.removeItem('user');
+          }
         }
       } catch (error) {
         console.error('Auth check error:', error);
-        // Clear invalid auth data
-        authService.logout();
+        setUser(null);
+        // ✅ CHỈ clear storage, KHÔNG gọi authService.logout()
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('id_token');
+        localStorage.removeItem('refresh_token');
+        localStorage.removeItem('local_token');
+        localStorage.removeItem('user');
       } finally {
         setIsLoading(false);
       }

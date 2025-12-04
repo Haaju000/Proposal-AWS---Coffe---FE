@@ -38,26 +38,26 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Handle response errors
+// ✅ SỬA: Handle response errors - KHÔNG tự động logout
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
+    // ✅ CHỈ log error, KHÔNG logout tự động
     if (error.response?.status === 401) {
-      console.warn('Token expired, logging out...');
-      // Clear all tokens
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('id_token');
-      localStorage.removeItem('refresh_token');
-      localStorage.removeItem('local_token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
+      console.warn('⚠️ Notification API 401 error - may need authentication setup on backend');
+      console.warn('Error details:', error.response?.data);
+      
+      // ❌ LOẠI BỎ: Không clear storage hay redirect ở đây
+      // Let parent components handle auth state
+    } else {
+      console.error('❌ Notification API error:', error.response?.status, error.response?.data);
     }
     return Promise.reject(error);
   }
 );
 
 const notificationService = {
-  // Get all notifications for current user
+  // ✅ SỬA: Get all notifications với better error handling
   getNotifications: async (limit = 50) => {
     try {
       console.log('📋 Getting notifications with limit:', limit);
@@ -68,6 +68,14 @@ const notificationService = {
       return response.data;
     } catch (error) {
       console.error('❌ Error fetching notifications:', error);
+      
+      // ✅ THÊM: Xử lý 401 đặc biệt cho notifications
+      if (error.response?.status === 401) {
+        console.warn('🔒 Notification API requires authentication - backend may not be configured');
+        // Return empty array instead of throwing error
+        return [];
+      }
+      
       if (error.response?.data?.error) {
         throw new Error(error.response.data.error);
       } else if (error.response?.data?.message) {
@@ -80,7 +88,7 @@ const notificationService = {
     }
   },
 
-  // Get unread notifications only
+  // ✅ SỬA: Get unread notifications với fallback
   getUnreadNotifications: async () => {
     try {
       console.log('📋 Getting unread notifications...');
@@ -89,6 +97,13 @@ const notificationService = {
       return response.data;
     } catch (error) {
       console.error('❌ Error fetching unread notifications:', error);
+      
+      // ✅ THÊM: Return empty array cho 401
+      if (error.response?.status === 401) {
+        console.warn('🔒 Unread notifications requires authentication');
+        return [];
+      }
+      
       if (error.response?.data?.error) {
         throw new Error(error.response.data.error);
       }
@@ -96,7 +111,7 @@ const notificationService = {
     }
   },
 
-  // Get unread notifications count (for badge)
+  // ✅ SỬA: Get unread count với safe fallback
   getUnreadCount: async () => {
     try {
       console.log('🔢 Getting unread count...');
@@ -105,11 +120,12 @@ const notificationService = {
       return response.data.unreadCount;
     } catch (error) {
       console.error('❌ Error fetching unread count:', error);
-      return 0; // Return 0 on error to avoid breaking UI
+      // ✅ LUÔN return 0 on error để không crash UI
+      return 0;
     }
   },
 
-  // Mark a notification as read
+  // ✅ SỬA: Mark as read với better error handling
   markAsRead: async (notificationId) => {
     try {
       console.log('📖 Marking notification as read:', notificationId);
@@ -118,6 +134,13 @@ const notificationService = {
       return response.data;
     } catch (error) {
       console.error('❌ Error marking notification as read:', error);
+      
+      // ✅ THÊM: Ignore 401 errors for mark as read
+      if (error.response?.status === 401) {
+        console.warn('🔒 Mark as read requires authentication');
+        return { success: false, message: 'Authentication required' };
+      }
+      
       if (error.response?.data?.error) {
         throw new Error(error.response.data.error);
       }
@@ -125,7 +148,7 @@ const notificationService = {
     }
   },
 
-  // Mark all notifications as read
+  // ✅ SỬA: Mark all as read với safe handling
   markAllAsRead: async () => {
     try {
       console.log('📖 Marking all notifications as read...');
@@ -134,6 +157,13 @@ const notificationService = {
       return response.data;
     } catch (error) {
       console.error('❌ Error marking all notifications as read:', error);
+      
+      // ✅ THÊM: Safe fallback cho 401
+      if (error.response?.status === 401) {
+        console.warn('🔒 Mark all as read requires authentication');
+        return { success: false, message: 'Authentication required' };
+      }
+      
       if (error.response?.data?.error) {
         throw new Error(error.response.data.error);
       }
@@ -141,7 +171,7 @@ const notificationService = {
     }
   },
 
-  // Delete a notification
+  // ✅ SỬA: Delete notification với safe handling  
   deleteNotification: async (notificationId) => {
     try {
       console.log('🗑️ Deleting notification:', notificationId);
@@ -150,6 +180,13 @@ const notificationService = {
       return response.data;
     } catch (error) {
       console.error('❌ Error deleting notification:', error);
+      
+      // ✅ THÊM: Safe fallback cho 401
+      if (error.response?.status === 401) {
+        console.warn('🔒 Delete notification requires authentication');
+        return { success: false, message: 'Authentication required' };
+      }
+      
       if (error.response?.data?.error) {
         throw new Error(error.response.data.error);
       }
