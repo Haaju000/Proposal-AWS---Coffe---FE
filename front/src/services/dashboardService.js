@@ -20,7 +20,7 @@ dashboardAPI.interceptors.request.use(
       config.baseURL = getBaseURL();
     }
     
-    const token = authService.getIdToken(); // Sử dụng ID Token cho Admin
+    const token = authService.getToken(); // Tự động chọn id_token hoặc local_token dựa trên role
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
       console.log('🔑 Adding admin token to dashboard request');

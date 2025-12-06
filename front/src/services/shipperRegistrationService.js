@@ -20,7 +20,7 @@ registrationAPI.interceptors.request.use(
       config.baseURL = getBaseURL();
     }
     
-    const token = authService.getIdToken();
+    const token = authService.getToken(); // Tự động chọn id_token hoặc local_token dựa trên role
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -37,7 +37,7 @@ const shipperRegistrationService = {
     try {
       console.log('🚚 Submitting shipper registration...', applicationData);
       console.log('🔗 Request URL:', `${getBaseURL()}/api/ShipperRegistration/register`);
-      console.log('🔑 ID Token:', authService.getIdToken() ? 'Present' : 'Missing');
+      console.log('🔑 Token:', authService.getToken() ? 'Present' : 'Missing');
       
       const response = await registrationAPI.post('/api/ShipperRegistration/register', applicationData);
       console.log('✅ Shipper registration submitted successfully:', response.data);

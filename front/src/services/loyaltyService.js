@@ -20,7 +20,7 @@ loyaltyAPI.interceptors.request.use(
       config.baseURL = getBaseURL();
     }
     
-    const token = authService.getIdToken();
+    const token = authService.getToken(); // Tự động chọn id_token hoặc local_token dựa trên role
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }

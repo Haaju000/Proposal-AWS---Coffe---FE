@@ -20,7 +20,7 @@ shipperAPI.interceptors.request.use(
       config.baseURL = getBaseURL();
     }
     
-    const token = authService.getIdToken(); // Sử dụng ID Token thay vì Access Token
+    const token = authService.getToken(); // Tự động chọn id_token hoặc local_token dựa trên role
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -37,7 +37,7 @@ const shipperService = {
     try {
       console.log('🔍 Fetching pending shippers...');
       console.log('🔗 Request URL:', `${getBaseURL()}/api/Admin/shippers/pending`);
-      console.log('🔑 ID Token:', authService.getIdToken() ? 'Present' : 'Missing');
+      console.log('🔑 Token:', authService.getToken() ? 'Present' : 'Missing');
       
       const response = await shipperAPI.get('/api/Admin/shippers/pending');
       console.log('✅ Pending shippers fetched successfully:', response.data);

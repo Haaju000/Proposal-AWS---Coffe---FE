@@ -20,7 +20,7 @@ customerAPI.interceptors.request.use(
       config.baseURL = getBaseURL();
     }
     
-    const token = authService.getIdToken(); // Sử dụng ID Token thay vì Access Token
+    const token = authService.getToken(); // Tự động chọn id_token hoặc local_token dựa trên role
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -37,7 +37,7 @@ const customerService = {
     try {
       console.log('🔍 Fetching all customers...');
       console.log('🔗 Request URL:', `${getBaseURL()}/api/Customer`);
-      console.log('🔑 ID Token:', authService.getIdToken() ? 'Present' : 'Missing');
+      console.log('🔑 Token:', authService.getToken() ? 'Present' : 'Missing');
       
       const response = await customerAPI.get('/api/Customer');
       console.log('✅ Customers fetched successfully:', response.data);
