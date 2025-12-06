@@ -1869,9 +1869,9 @@ const OrdersContent = ({ showNotification }) => {
                         className="action-btn confirm-btn"
                         onClick={() => handleUpdateOrderStatus(order.orderId, 'Confirmed')}
                         disabled={updating[order.orderId]}
-                        title="Xác nhận đơn hàng để shipper có thể nhận"
+                        title="Xác nhận"
                       >
-                        {updating[order.orderId] ? 'Đang xử lý...' : '✅ Xác nhận cho Shipper'}
+                        {updating[order.orderId] ? 'Đang xử lý...' : 'Xác nhận'}
                       </button>
                     )}
 
@@ -1892,9 +1892,9 @@ const OrdersContent = ({ showNotification }) => {
                         className="action-btn complete-btn"
                         onClick={() => handleUpdateOrderStatus(order.orderId, 'Completed')}
                         disabled={updating[order.orderId]}
-                        title="Hoàn thành đơn hàng và tặng điểm loyalty"
+                        title="Hoàn thành"
                       >
-                        {updating[order.orderId] ? 'Đang xử lý...' : '🎉 Hoàn thành & Tặng điểm'}
+                        {updating[order.orderId] ? 'Đang xử lý...' : 'Hoàn thành'}
                       </button>
                     )}
                     

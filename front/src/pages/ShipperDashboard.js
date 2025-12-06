@@ -695,8 +695,12 @@ const ShipperDashboard = () => {
               <div className="shipper-order-details">
                 <div className="shipper-detail-item">
                   <span className="shipper-detail-label">Tổng tiền:</span>
-                  <span className="shipper-detail-value amount">{formatCurrency(order.totalPrice)}₫</span>
+                  <span className="shipper-detail-value amount">{formatCurrency(order.finalPrice || order.totalPrices)}₫</span>
                 </div>
+                <div className="shipper-detail-item">
+                    <span className="shipper-detail-label">Voucher:</span>
+                    <span className="shipper-detail-value voucher-code">{order.voucherCode}</span>
+                  </div>
                 <div className="shipper-detail-item">
                   <span className="shipper-detail-label">Ghi chú:</span>
                   <span className="shipper-detail-value">{order.deliveryNote || 'Không có'}</span>
