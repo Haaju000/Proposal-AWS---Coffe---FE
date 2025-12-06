@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import authService from '../services/authService';
 import paymentService from '../services/paymentService';
 import { ENV_CONFIG } from '../config/environment';
 import '../css/PaymentResult.css';
@@ -549,7 +550,7 @@ const PaymentResult = () => {
                                 console.log('📋 Fetching actual order status from backend...');
                                 const orderResponse = await fetch(`${ENV_CONFIG.getApiBaseUrl()}/Order/${orderId}`, {
                                     headers: {
-                                        'Authorization': `Bearer ${localStorage.getItem('id_token') || localStorage.getItem('access_token') || localStorage.getItem('local_token')}`
+                                        'Authorization': `Bearer ${authService.getToken()}`
                                     }
                                 });
                                 
@@ -601,10 +602,7 @@ const PaymentResult = () => {
 
     const handleViewOrders = () => {
         // Check if user is still authenticated
-        const idToken = localStorage.getItem('id_token');
-        const accessToken = localStorage.getItem('access_token');
-        
-        if (!idToken && !accessToken) {
+        if (!authService.isAuthenticated()) {
             // Token expired, redirect to login first
             alert('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại để xem đơn hàng.');
             window.location.href = '/login?redirect=/orders';

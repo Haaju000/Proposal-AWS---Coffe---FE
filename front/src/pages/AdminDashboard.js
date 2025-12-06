@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import authService from '../services/authService';
 import cakeService from '../services/cakeService';
 import drinkService from '../services/drinkService';
 import toppingService from '../services/toppingService';
@@ -516,7 +517,7 @@ const OverviewContent = ({
   // Load stock alerts for fallback mode only
   const loadStockAlertsForFallback = async () => {
     try {
-      const token = localStorage.getItem('id_token');
+      const token = authService.getToken();
       if (token) {
         const alertsResponse = await inventoryService.getStockAlerts(token);
         setStockAlerts(alertsResponse);
@@ -875,7 +876,7 @@ const ProductsContent = ({ showNotification, showConfirmModal }) => {
       `Bạn có chắc chắn muốn xóa "${productName}"? Hành động này không thể hoàn tác.`,
       async () => {
         try {
-          const token = localStorage.getItem('id_token');
+          const token = authService.getToken();
           if (productType === 'drink') {
             await drinkService.deleteDrink(productId, token);
           } else if (productType === 'cake') {
@@ -1131,7 +1132,7 @@ const ProductFormModal = ({ product, isEditing, onClose, onSuccess, showNotifica
     setLoading(true);
 
     try {
-      const token = localStorage.getItem('id_token');
+      const token = authService.getToken();
       
       if (!token) {
         showNotification('Lỗi xác thực!', 'Bạn cần đăng nhập để thực hiện hành động này', 'error');
@@ -2190,7 +2191,7 @@ const InventoryContent = ({ showNotification }) => {
 
   const loadInventoryData = async () => {
     try {
-      const token = localStorage.getItem('id_token');
+      const token = authService.getToken();
       if (!token) {
         showNotification('Lỗi!', 'Chưa đăng nhập', 'error');
         return;
