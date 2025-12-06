@@ -25,11 +25,11 @@ apiClient.interceptors.request.use(
     }
     
     // Check for both Cognito access_token and local_token
-    const accessToken = localStorage.getItem('access_token');
+    const idToken = localStorage.getItem('id_token');
     const localToken = localStorage.getItem('local_token');
     
-    if (accessToken) {
-      config.headers.Authorization = `Bearer ${accessToken}`;
+    if (idToken) {
+      config.headers.Authorization = `Bearer ${idToken}`;
     } else if (localToken) {
       config.headers.Authorization = `Bearer ${localToken}`;
     }
@@ -324,8 +324,8 @@ const authService = {
       }
       
       // For regular users: need access_token and check expiry
-      const accessToken = localStorage.getItem('access_token');
-      if (!accessToken) {
+      const idToken = localStorage.getItem('id_token');
+      if (!idToken) {
         return null;
       }
       
@@ -349,7 +349,7 @@ const authService = {
   // Check if user is authenticated
   isAuthenticated: () => {
     const user = authService.getCurrentUser();
-    const accessToken = localStorage.getItem('access_token');
+    const idToken = localStorage.getItem('id_token');
     const localToken = localStorage.getItem('local_token');
     
     // For shipper: only need local_token and user with Shipper role
@@ -357,8 +357,8 @@ const authService = {
       return !!(localToken && user);
     }
     
-    // For regular users (User/Admin): need Cognito access_token
-    return !!(accessToken && user);
+    // For regular users (User/Admin): need Cognito id_token
+    return !!(idToken && user);
   },
 
   // Check if user is admin
@@ -399,7 +399,7 @@ const authService = {
     if (user?.role === 'Shipper') {
       return localStorage.getItem('local_token');
     }
-    return localStorage.getItem('access_token');
+    return localStorage.getItem('id_token');
   }
 };
 
