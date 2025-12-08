@@ -160,16 +160,7 @@ const Header = () => {
                         <span className="total-label">Tổng cộng:</span>
                         <span className="total-amount">₫{cartTotal.toLocaleString()}</span>
                       </div>
-                      <div className="cart-dropdown-actions">
-                        <Link to="/menu" className="view-cart-btn" onClick={closeCartMenu}>
-                          <span>👁️</span>
-                          Xem giỏ hàng
-                        </Link>
-                        <button className="checkout-btn">
-                          <span>💳</span>
-                          Thanh toán
-                        </button>
-                      </div>
+                      
                     </div>
                   </>
                 )}

@@ -10,6 +10,39 @@
   text-align: center;
   margin-bottom: 3rem;
   padding: 2rem 0;
+  position: relative;
+}
+
+.orders-header-top {
+  max-width: 1200px;
+  margin: 0 auto 1rem auto;
+  text-align: left;
+}
+
+.btn-back {
+  background: linear-gradient(135deg, #6B4423 0%, #8B6F47 100%);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(107, 68, 35, 0.2);
+}
+
+.btn-back:hover {
+  transform: translateX(-5px);
+  box-shadow: 0 6px 20px rgba(107, 68, 35, 0.3);
+  background: linear-gradient(135deg, #8B6F47 0%, #6B4423 100%);
+}
+
+.btn-back:active {
+  transform: translateX(-3px);
 }
 
 .orders-title {

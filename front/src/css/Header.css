@@ -414,39 +414,37 @@
 
 .cart-dropdown {
   position: absolute;
-  top: calc(100% + 0.5rem);
+  top: calc(100% + 1rem);
   right: 0;
   background: white;
-  border-radius: 16px;
+  border-radius: 20px;
   box-shadow: 
-    0 20px 40px rgba(139, 69, 19, 0.12),
-    0 8px 25px rgba(0, 0, 0, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.6);
-  border: 1px solid rgba(139, 69, 19, 0.1);
-  min-width: 380px;
-  max-width: 420px;
+    0 10px 40px rgba(0, 0, 0, 0.15),
+    0 4px 12px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(139, 69, 19, 0.08);
+  min-width: 400px;
+  max-width: 450px;
   z-index: 1002;
   animation: cartSlideDown 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
-  backdrop-filter: blur(20px);
 }
 
 @keyframes cartSlideDown {
   from {
     opacity: 0;
-    transform: translateY(-15px) scale(0.95);
+    transform: translateY(-10px);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translateY(0);
   }
 }
 
 /* Cart Header */
 .cart-dropdown-header {
-  padding: 1.5rem 1.5rem 1rem 1.5rem;
-  border-bottom: 1px solid rgba(139, 69, 19, 0.1);
-  background: linear-gradient(135deg, #ffffff, #fefefe);
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #f0f0f0;
+  background: white;
 }
 
 .cart-header-content {

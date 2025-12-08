@@ -173,6 +173,11 @@ const Orders = () => {
   return (
     <div className="orders-container">
       <div className="orders-header">
+        <div className="orders-header-top">
+          <button className="btn-back" onClick={() => window.history.back()}>
+            ← Quay lại
+          </button>
+        </div>
         <h1 className="orders-title">
           <span className="coffee-icon">☕</span>
           Lịch sử đơn hàng
