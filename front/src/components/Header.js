@@ -115,52 +115,69 @@ const Header = () => {
 
             {/* Cart Dropdown */}
             {showCartMenu && (
-              <div className="cart-dropdown">
-                <div className="cart-dropdown-header">
-                  <div className="cart-header-content">
-                    <div className="cart-title-section">
-                      <div className="cart-title-icon">🛒</div>
-                      <div className="cart-title-text">
-                        <h3>Giỏ hàng</h3>
-                        <p>{cartItemCount} sản phẩm</p>
-                      </div>
-                    </div>
-                    <button className="close-cart-btn" onClick={closeCartMenu}>
-                      ✕
-                    </button>
-                  </div>
+              <div className="header-cart-dropdown">
+                <div className="header-cart-dropdown-header">
+                  <h3 className="header-cart-title">Đơn hàng của bạn</h3>
+                  <span className="header-cart-count-badge">{cartItemCount} món</span>
+                  <button className="header-close-cart-btn" onClick={closeCartMenu}>
+                    ✕
+                  </button>
                 </div>
 
                 {cartItems.length === 0 ? (
-                  <div className="empty-cart-message">
-                    <div className="empty-cart-icon">🛒</div>
-                    <p className="empty-cart-text">Giỏ hàng của bạn đang trống</p>
+                  <div className="header-empty-cart">
+                    <div className="header-empty-cart-icon">🛒</div>
+                    <p className="header-empty-cart-text">Giỏ hàng của bạn đang trống</p>
                   </div>
                 ) : (
                   <>
                     <div className="header-cart-items-list">
                       {cartItems.map((item) => (
-                        <div key={item.id} className="cart-preview-item">
-                          <div className="preview-item-image">
-                            <span className="preview-item-emoji">{item.image}</span>
-                          </div>
-                          <div className="preview-item-content">
-                            <div className="preview-item-name">{item.name}</div>
-                            <div className="preview-item-details">
-                              <span className="preview-quantity">x{item.quantity}</span>
-                              <span className="preview-price">₫{getItemPrice(item.price).toLocaleString()}</span>
+                        <div key={item.id} className="header-cart-item">
+                          {/* Dòng 1: Hình ảnh - Tên sản phẩm */}
+                          <div className="header-item-line-1">
+                            <div className="header-item-img">
+                              {item.image && item.image.startsWith('http') ? (
+                                <img src={item.image} alt={item.name} className="header-img" />
+                              ) : (
+                                <span className="header-emoji">{item.image}</span>
+                              )}
                             </div>
+                            <span className="header-item-name">{item.name}</span>
+                          </div>
+                          
+                          {/* Hiển thị toppings nếu có */}
+                          {item.selectedToppings && item.selectedToppings.length > 0 && (
+                            <div className="header-item-toppings">
+                              {item.selectedToppings.map((topping, index) => (
+                                <div key={index} className="header-topping-item">
+                                  <span className="header-topping-name">+ {topping.name} x1</span>
+                                  <span className="header-topping-price">₫{getItemPrice(topping.price).toLocaleString()}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          
+                          {/* Dòng 2: Giá tiền */}
+                          <div className="header-item-line-2">
+                            <span className="header-item-price">₫{getItemTotalPrice(item).toLocaleString()}</span>
+                          </div>
+                          
+                          {/* Dòng 3: Số lượng */}
+                          <div className="header-item-line-3">
+                            <span className="header-item-qty">Số lượng hiện tại: {item.quantity}</span>
                           </div>
                         </div>
                       ))}
                     </div>
 
                     <div className="header-cart-footer">
-                      <div className="cart-total-preview">
-                        <span className="total-label">Tổng cộng:</span>
-                        <span className="total-amount">₫{cartTotal.toLocaleString()}</span>
+                      <div className="header-cart-summary">
+                        <div className="header-total-line">
+                          <span className="header-total-text">Tổng cộng:</span>
+                          <span className="header-total-price">₫{cartTotal.toLocaleString()}</span>
+                        </div>
                       </div>
-                      
                     </div>
                   </>
                 )}
