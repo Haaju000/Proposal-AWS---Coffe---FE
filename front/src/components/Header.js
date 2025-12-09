@@ -138,7 +138,7 @@ const Header = () => {
                   </div>
                 ) : (
                   <>
-                    <div className="cart-dropdown-items">
+                    <div className="header-cart-items-list">
                       {cartItems.map((item) => (
                         <div key={item.id} className="cart-preview-item">
                           <div className="preview-item-image">
@@ -155,7 +155,7 @@ const Header = () => {
                       ))}
                     </div>
 
-                    <div className="cart-dropdown-footer">
+                    <div className="header-cart-footer">
                       <div className="cart-total-preview">
                         <span className="total-label">Tổng cộng:</span>
                         <span className="total-amount">₫{cartTotal.toLocaleString()}</span>
