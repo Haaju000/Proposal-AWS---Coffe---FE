@@ -5,41 +5,21 @@ import { ENV_CONFIG } from '../config/environment';
 // Helper to get API base URL dynamically
 const getBaseURL = () => ENV_CONFIG.getApiBaseUrl().replace('/api', '');
 
-// Create axios instance với interceptor để tự động thêm token
-const shipperAPI = axios.create({
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// Add auth token to requests
-shipperAPI.interceptors.request.use(
-  (config) => {
-    // Set baseURL dynamically for each request
-    if (!config.baseURL) {
-      config.baseURL = getBaseURL();
-    }
-    
-    const token = authService.getToken(); // Tự động chọn id_token hoặc local_token dựa trên role
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
 const shipperService = {
   // GET /api/Admin/shippers/pending - Lấy danh sách shippers chờ phê duyệt
   getPendingShippers: async () => {
     try {
       console.log('🔍 Fetching pending shippers...');
+      const token = authService.getToken();
       console.log('🔗 Request URL:', `${getBaseURL()}/api/Admin/shippers/pending`);
-      console.log('🔑 Token:', authService.getToken() ? 'Present' : 'Missing');
+      console.log('🔑 Token:', token ? 'Present' : 'Missing');
       
-      const response = await shipperAPI.get('/api/Admin/shippers/pending');
+      const response = await axios.get(`${getBaseURL()}/api/Admin/shippers/pending`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
       console.log('✅ Pending shippers fetched successfully:', response.data);
       return response.data;
     } catch (error) {
@@ -66,7 +46,13 @@ const shipperService = {
   getAllShippers: async () => {
     try {
       console.log('🔍 Fetching all shippers...');
-      const response = await shipperAPI.get('/api/Admin/shippers');
+      const token = authService.getToken();
+      const response = await axios.get(`${getBaseURL()}/api/Admin/shippers`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
       console.log('✅ All shippers fetched successfully:', response.data);
       return response.data;
     } catch (error) {
@@ -75,13 +61,17 @@ const shipperService = {
     }
   },
 
-
-
   // POST /api/Admin/shipper/{userId}/approve - Phê duyệt shipper
   approveShipper: async (userId) => {
     try {
       console.log(`✅ Approving shipper with ID: ${userId}`);
-      const response = await shipperAPI.post(`/api/Admin/shipper/${userId}/approve`, {});
+      const token = authService.getToken();
+      const response = await axios.post(`${getBaseURL()}/api/Admin/shipper/${userId}/approve`, {}, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
       console.log('✅ Shipper approved successfully:', response.data);
       return response.data;
     } catch (error) {
@@ -101,7 +91,13 @@ const shipperService = {
   rejectShipper: async (userId, reason = '') => {
     try {
       console.log(`❌ Rejecting shipper with ID: ${userId}, reason: ${reason}`);
-      const response = await shipperAPI.post(`/api/Admin/shipper/${userId}/reject`, { reason });
+      const token = authService.getToken();
+      const response = await axios.post(`${getBaseURL()}/api/Admin/shipper/${userId}/reject`, { reason }, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
       console.log('✅ Shipper rejected successfully:', response.data);
       return response.data;
     } catch (error) {
@@ -121,7 +117,13 @@ const shipperService = {
   lockShipper: async (userId) => {
     try {
       console.log(`🔒 Locking shipper with ID: ${userId}`);
-      const response = await shipperAPI.put(`/api/Admin/shipper/${userId}/lock`);
+      const token = authService.getToken();
+      const response = await axios.put(`${getBaseURL()}/api/Admin/shipper/${userId}/lock`, {}, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
       console.log('✅ Shipper locked successfully:', response.data);
       return response.data;
     } catch (error) {
@@ -141,7 +143,13 @@ const shipperService = {
   resetShipperPassword: async (userId) => {
     try {
       console.log(`🔑 Resetting password for shipper with ID: ${userId}`);
-      const response = await shipperAPI.post(`/api/Admin/shipper/${userId}/reset-password`);
+      const token = authService.getToken();
+      const response = await axios.post(`${getBaseURL()}/api/Admin/shipper/${userId}/reset-password`, {}, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
       console.log('✅ Shipper password reset successfully:', response.data);
       return response.data;
     } catch (error) {
@@ -161,8 +169,13 @@ const shipperService = {
   getShipperById: async (shipperId) => {
     try {
       console.log(`🔍 Fetching shipper with ID: ${shipperId}`);
-      // Giả sử có API endpoint để lấy thông tin chi tiết shipper
-      const response = await shipperAPI.get(`/api/Shipper/${shipperId}`);
+      const token = authService.getToken();
+      const response = await axios.get(`${getBaseURL()}/api/Shipper/${shipperId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
       console.log('✅ Shipper details fetched successfully:', response.data);
       return response.data;
     } catch (error) {
