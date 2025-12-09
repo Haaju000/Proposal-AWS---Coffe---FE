@@ -38,13 +38,6 @@ const ShipperRegistration = ({ isOpen, onClose }) => {
       return;
     }
 
-    // Check if user is logged in
-    const token = authService.getIdToken();
-    if (!token) {
-      setErrors({ auth: 'Bạn cần đăng nhập để nộp đơn ứng tuyển.' });
-      return;
-    }
-
     setLoading(true);
     setSubmitStatus(null);
     setErrors({});
@@ -141,15 +134,6 @@ const ShipperRegistration = ({ isOpen, onClose }) => {
         {/* Registration Form */}
         {submitStatus !== 'success' && submitStatus !== 'error' && (
           <form onSubmit={handleSubmit} className="registration-form">
-            {/* Authentication Error */}
-            {errors.auth && (
-              <div className="auth-error">
-                <div className="auth-error-icon">🔒</div>
-                <p>{errors.auth}</p>
-                <small>Vui lòng đăng nhập trước khi nộp đơn ứng tuyển.</small>
-              </div>
-            )}
-
             <div className="form-section">
               <h3>📝 Thông tin ứng tuyển</h3>
               <p className="section-description">
