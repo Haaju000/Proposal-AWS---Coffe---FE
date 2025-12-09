@@ -9,7 +9,7 @@ import '../css/Header.css';
 const Header = () => {
   const location = useLocation();
   const { user, isAuthenticated, logout } = useAuth();
-  const { cartItems, cartItemCount, cartTotal, getItemPrice } = useCart();
+  const { cartItems, cartItemCount, cartTotal, getItemPrice, getItemTotalPrice } = useCart();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showCartMenu, setShowCartMenu] = useState(false);
   const [showShipperModal, setShowShipperModal] = useState(false);
